@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="tr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Eşleştirme - GoalMaster</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Anybody:wght@400;700;800&amp;family=Hanken+Grotesk:wght@400;500;700&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary-fixed-variant": "#3c4d00",
+                        "surface-container-low": "#131b2e",
+                        "on-primary-fixed": "#161e00",
+                        "error": "#ffb4ab",
+                        "tertiary-fixed-dim": "#ffb4aa",
+                        "tertiary-fixed": "#ffdad5",
+                        "primary-fixed": "#c3f400",
+                        "inverse-on-surface": "#283044",
+                        "on-tertiary-fixed": "#410001",
+                        "surface-bright": "#31394d",
+                        "surface-container-highest": "#2d3449",
+                        "on-secondary-fixed": "#001849",
+                        "on-error-container": "#ffdad6",
+                        "secondary-fixed": "#dae1ff",
+                        "surface-container-lowest": "#060e20",
+                        "tertiary": "#ffffff",
+                        "secondary-container": "#0266ff",
+                        "on-tertiary-container": "#ca0a0f",
+                        "outline": "#8e9379",
+                        "on-primary": "#283500",
+                        "inverse-surface": "#dae2fd",
+                        "outline-variant": "#444933",
+                        "on-error": "#690005",
+                        "primary-fixed-dim": "#abd600",
+                        "surface-container-high": "#222a3d",
+                        "primary": "#ffffff",
+                        "on-tertiary-fixed-variant": "#930005",
+                        "surface-dim": "#0b1326",
+                        "on-secondary": "#002b75",
+                        "on-surface-variant": "#c4c9ac",
+                        "primary-container": "#c3f400",
+                        "inverse-primary": "#506600",
+                        "surface-variant": "#2d3449",
+                        "secondary": "#b3c5ff",
+                        "tertiary-container": "#ffdad5",
+                        "on-secondary-fixed-variant": "#003fa4",
+                        "on-surface": "#dae2fd",
+                        "surface": "#0b1326",
+                        "on-secondary-container": "#f9f7ff",
+                        "secondary-fixed-dim": "#b3c5ff",
+                        "on-primary-container": "#556d00",
+                        "error-container": "#93000a",
+                        "on-background": "#dae2fd",
+                        "surface-container": "#171f33",
+                        "on-tertiary": "#690003",
+                        "background": "#0b1326",
+                        "surface-tint": "#abd600"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin-mobile": "16px",
+                        "sm": "16px",
+                        "base": "4px",
+                        "xs": "8px",
+                        "margin-desktop": "32px",
+                        "xl": "48px",
+                        "lg": "32px",
+                        "md": "24px",
+                        "gutter": "16px"
+                    },
+                    "fontFamily": {
+                        "display-lg": ["Anybody"],
+                        "headline-lg-mobile": ["Anybody"],
+                        "headline-md": ["Anybody"],
+                        "label-md": ["JetBrains Mono"],
+                        "body-md": ["Hanken Grotesk"],
+                        "label-sm": ["JetBrains Mono"],
+                        "headline-lg": ["Anybody"],
+                        "body-lg": ["Hanken Grotesk"]
+                    },
+                    "fontSize": {
+                        "display-lg": ["48px", { "lineHeight": "52px", "letterSpacing": "-0.02em", "fontWeight": "800" }],
+                        "headline-lg-mobile": ["28px", { "lineHeight": "34px", "fontWeight": "700" }],
+                        "headline-md": ["24px", { "lineHeight": "30px", "fontWeight": "700" }],
+                        "label-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.05em", "fontWeight": "500" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "fontWeight": "700" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings: 'FILL' 1;
+        }
+
+        @keyframes radar-ping {
+            0% { transform: scale(0.5); opacity: 0.8; }
+            100% { transform: scale(2.5); opacity: 0; }
+        }
+        
+        @keyframes scanner-sweep {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .radar-ring {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            border: 2px solid theme('colors.primary-container');
+            animation: radar-ping 3s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+        }
+        
+        .radar-ring:nth-child(2) {
+            animation-delay: 1s;
+        }
+        
+        .radar-ring:nth-child(3) {
+            animation-delay: 2s;
+        }
+
+        .scanner {
+            position: absolute;
+            inset: -10%;
+            border-radius: 50%;
+            background: conic-gradient(from 0deg, transparent 0deg, transparent 270deg, rgba(195,244,0,0.5) 360deg);
+            animation: scanner-sweep 2s linear infinite;
+            mask-image: radial-gradient(transparent 30%, black 70%);
+            -webkit-mask-image: radial-gradient(transparent 30%, black 70%);
+        }
+        
+        .glass-panel {
+            background: linear-gradient(135deg, rgba(45, 52, 73, 0.4) 0%, rgba(30, 41, 59, 0.2) 100%);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background antialiased min-h-screen flex flex-col overflow-x-hidden selection:bg-primary-container selection:text-on-primary-container">
+<!-- Ambient Background Glow -->
+<div class="fixed inset-0 pointer-events-none z-0 overflow-hidden flex items-center justify-center">
+<div class="w-[800px] h-[800px] rounded-full bg-primary-container/5 blur-[120px] animate-pulse" style="animation-duration: 4s;"></div>
+</div>
+<!-- TopAppBar -->
+<header class="flex justify-between items-center w-full px-margin-mobile h-16 fixed top-0 z-50 border-b border-white/10 bg-surface/60 backdrop-blur-md">
+<!-- Leading: Avatar -->
+<div class="flex items-center gap-xs relative">
+<div class="w-10 h-10 rounded-full border-2 border-primary-container overflow-hidden p-[2px]">
+<img class="w-full h-full rounded-full object-cover" data-alt="A highly detailed, cinematic portrait of a determined e-sports athlete wearing a futuristic dark navy and neon green jersey. The lighting is moody and dramatic with high contrast, illuminated by soft rim lighting in electric blue and bright neon green. The background is a deeply blurred, atmospheric dark arena setting. Professional photography, high-end 8k resolution, crisp focus." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDlK6AtzG9rS6wAF8oEfTX2S-BugjJxvPYSn4VadLsjqs7-twklyl96NdKvWwQbuKXqoY9eIxwG7BR0B_umM3Dx91f00_dkm4r0LSJqkvog8QdMi0s_k7NrTzvAZEpfjKApGRTo-fruTI-MK64S4OuZASpSV4eNo4uD52GNiyb3tU3ToMKJtHTgvNk7HdWOnelrEB_lWccQzeyjaVMJiP7ttxiWmbSSf-Sk-fyiS3yFmJ2MVIorUm8USA"/>
+</div>
+<div class="absolute -bottom-1 -right-1 bg-surface-container-high border border-primary-container rounded-full px-1.5 py-0.5 flex items-center shadow-[0_0_8px_rgba(195,244,0,0.3)]">
+<span class="font-label-sm text-[10px] text-primary-container font-bold">LVL 42</span>
+</div>
+</div>
+<!-- Headline: Logo -->
+<div class="flex-1 flex justify-center">
+<h1 class="font-display-lg text-[32px] md:text-display-lg text-primary-container drop-shadow-[0_0_10px_rgba(171,214,0,0.4)] leading-none tracking-tight">
+                GoalMaster
+            </h1>
+</div>
+<!-- Trailing: Actions -->
+<div class="flex items-center gap-sm">
+<div class="flex flex-col items-end">
+<div class="flex items-center gap-1 text-primary-container">
+<span class="material-symbols-outlined fill text-[16px]">diamond</span>
+<span class="font-label-sm text-label-sm font-bold">1,450</span>
+</div>
+<div class="flex items-center gap-1 text-secondary-container">
+<span class="material-symbols-outlined fill text-[16px]">monetization_on</span>
+<span class="font-label-sm text-label-sm font-bold">12K</span>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-1 flex flex-col items-center justify-center pt-24 pb-28 px-margin-mobile relative z-10 w-full max-w-4xl mx-auto min-h-screen">
+<!-- Radar & Status Section -->
+<div class="flex flex-col items-center justify-center gap-xl mb-xl w-full">
+<div class="relative w-48 h-48 md:w-64 md:h-64 flex items-center justify-center">
+<!-- Radar Rings -->
+<div class="radar-ring"></div>
+<div class="radar-ring"></div>
+<div class="radar-ring"></div>
+<!-- Scanner Sweep -->
+<div class="scanner"></div>
+<!-- Center Core -->
+<div class="relative z-10 w-24 h-24 rounded-full bg-surface-container-high border-4 border-primary-container shadow-[0_0_30px_rgba(195,244,0,0.5)] flex items-center justify-center overflow-hidden">
+<span class="material-symbols-outlined text-[48px] text-primary-container animate-pulse">radar</span>
+</div>
+</div>
+<!-- Status Text -->
+<div class="text-center">
+<h2 class="font-headline-md text-headline-md text-primary-container tracking-wide drop-shadow-[0_0_8px_rgba(195,244,0,0.3)]">
+                    Rakip Aranıyor...
+                </h2>
+<p class="font-body-md text-body-md text-on-surface-variant mt-xs">
+                    Tahmini süre: 00:14
+                </p>
+</div>
+</div>
+<!-- VS Overlay Section -->
+<div class="w-full flex items-center justify-center gap-sm md:gap-lg mb-xl relative">
+<!-- Connection Line Background -->
+<div class="absolute inset-x-10 top-1/2 -translate-y-1/2 h-[2px] bg-gradient-to-r from-primary-container/0 via-primary-container/50 to-error/0 z-0 hidden md:block"></div>
+<!-- Player 1 (User) -->
+<div class="glass-panel rounded-xl p-md flex flex-col items-center gap-sm w-[140px] md:w-[180px] relative z-10 shadow-lg border-primary-container/30">
+<div class="w-16 h-16 md:w-20 md:h-20 rounded-full border-2 border-primary-container p-1 bg-surface-container">
+<img class="w-full h-full rounded-full object-cover" data-alt="A highly detailed, cinematic portrait of a determined e-sports athlete wearing a futuristic dark navy and neon green jersey. The lighting is moody and dramatic with high contrast, illuminated by soft rim lighting in electric blue and bright neon green. The background is a deeply blurred, atmospheric dark arena setting. Professional photography, high-end 8k resolution, crisp focus." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCFvAv_jkfciGmG4W9QhYgbOlGcYb2UmbZzXdccS2JXy0hdpVTq7yy4MyRc6UL7K4zlvkAjuHh_Cd24rGdV2KMFixW7dhanebiSjCc3ql23hht9PYv6mRrrJFvX1Df8TwwSfRvjG4H9hp7xUy8lHx3rDktG-cOXG6S5jEdzTWMgm2UE47ykbZJ5Vo69ZdRiiZFsnu5P597-CGKVDgSeCJm-WeioJIYk5SWSboFF_F3he1RutibwzCOXaw"/>
+</div>
+<div class="text-center w-full">
+<h3 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface truncate">Sen</h3>
+<div class="flex items-center justify-center gap-1 mt-1 text-primary-container">
+<span class="material-symbols-outlined fill text-[14px]">star</span>
+<span class="font-label-md text-label-md font-bold">1200</span>
+</div>
+</div>
+</div>
+<!-- VS Badge -->
+<div class="relative z-20 flex-shrink-0">
+<div class="w-12 h-12 md:w-16 md:h-16 rounded-full bg-surface-container-highest border-2 border-white/20 flex items-center justify-center shadow-[0_0_20px_rgba(0,0,0,0.5)]">
+<span class="font-display-lg text-[20px] md:text-[24px] text-on-surface italic tracking-tighter">VS</span>
+</div>
+</div>
+<!-- Player 2 (Opponent Placeholder) -->
+<div class="glass-panel rounded-xl p-md flex flex-col items-center gap-sm w-[140px] md:w-[180px] relative z-10 shadow-lg border-white/5 opacity-80 animate-pulse">
+<div class="w-16 h-16 md:w-20 md:h-20 rounded-full border-2 border-dashed border-on-surface-variant p-1 bg-surface-container flex items-center justify-center">
+<span class="material-symbols-outlined text-[32px] text-on-surface-variant">person_search</span>
+</div>
+<div class="text-center w-full">
+<h3 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface-variant truncate">Aranıyor</h3>
+<div class="flex items-center justify-center gap-1 mt-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-[14px]">star_half</span>
+<span class="font-label-md text-label-md font-bold">???</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Action Area -->
+<div class="mt-auto md:mt-lg">
+<button class="group relative px-xl py-md rounded-full border-2 border-secondary-container bg-transparent overflow-hidden transition-transform active:scale-95 duration-150 flex items-center justify-center gap-xs">
+<div class="absolute inset-0 bg-secondary-container/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out"></div>
+<span class="material-symbols-outlined text-secondary-container relative z-10 text-[20px]">close</span>
+<span class="font-label-md text-label-md text-secondary-container font-bold tracking-widest relative z-10">İPTAL ET</span>
+</button>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-2 pb-safe h-20 border-t border-white/10 bg-surface-container shadow-lg rounded-t-xl md:hidden">
+<!-- Oyna (Active) -->
+<a class="flex flex-col items-center justify-center text-primary-container drop-shadow-[0_0_8px_rgba(195,244,0,0.6)] font-bold w-16 h-full scale-110 transition-transform duration-200 group" href="#">
+<div class="relative">
+<span class="material-symbols-outlined fill text-[28px] mb-1">sports_soccer</span>
+<div class="absolute -bottom-2 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-primary-container shadow-[0_0_5px_rgba(195,244,0,1)]"></div>
+</div>
+<span class="font-label-sm text-[10px] text-primary-container">Oyna</span>
+</a>
+<!-- Sıralama -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant w-16 h-full hover:bg-surface-bright/10 transition-colors rounded-lg group" href="#">
+<span class="material-symbols-outlined text-[24px] mb-1 group-hover:text-on-surface transition-colors">leaderboard</span>
+<span class="font-label-sm text-[10px] group-hover:text-on-surface transition-colors">Sıralama</span>
+</a>
+<!-- Market -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant w-16 h-full hover:bg-surface-bright/10 transition-colors rounded-lg group" href="#">
+<span class="material-symbols-outlined text-[24px] mb-1 group-hover:text-on-surface transition-colors">shopping_cart</span>
+<span class="font-label-sm text-[10px] group-hover:text-on-surface transition-colors">Market</span>
+</a>
+<!-- Sosyal -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant w-16 h-full hover:bg-surface-bright/10 transition-colors rounded-lg group" href="#">
+<span class="material-symbols-outlined text-[24px] mb-1 group-hover:text-on-surface transition-colors">groups</span>
+<span class="font-label-sm text-[10px] group-hover:text-on-surface transition-colors">Sosyal</span>
+</a>
+<!-- Profil -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant w-16 h-full hover:bg-surface-bright/10 transition-colors rounded-lg group" href="#">
+<span class="material-symbols-outlined text-[24px] mb-1 group-hover:text-on-surface transition-colors">person</span>
+<span class="font-label-sm text-[10px] group-hover:text-on-surface transition-colors">Profil</span>
+</a>
+</nav>
+<!-- Desktop Navigation Spacer (if adapting for larger screens) -->
+<div class="hidden md:flex fixed left-0 top-16 bottom-0 w-20 border-r border-white/10 bg-surface-container flex-col items-center py-lg gap-lg z-40">
+<!-- Replicated logic for desktop sidebar if required, but maintaining instruction focus on BottomNav mapping. 
+             Leaving visually hidden to follow the exact JSON instruction which is BottomNavBar centered. -->
+</div>
+</body></html>

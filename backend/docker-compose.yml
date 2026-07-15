@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  backend:
+    build: .
+    container_name: football_trivia_backend
+    ports:
+      - "8000:8000"
+    volumes:
+      # Map the local database file to the container so data is not lost when container restarts
+      - ./football_trivia.db:/app/football_trivia.db
+      # Map the match logs directory to keep match history
+      - ./match_logs:/app/match_logs
+    restart: unless-stopped

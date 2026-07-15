@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>GoalMaster - Mağaza</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Anybody:wght@400;700;800&amp;family=Hanken+Grotesk:wght@400;500;700&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary-fixed-variant": "#3c4d00",
+                        "surface-container-low": "#131b2e",
+                        "on-primary-fixed": "#161e00",
+                        "error": "#ffb4ab",
+                        "tertiary-fixed-dim": "#ffb4aa",
+                        "tertiary-fixed": "#ffdad5",
+                        "primary-fixed": "#c3f400",
+                        "inverse-on-surface": "#283044",
+                        "on-tertiary-fixed": "#410001",
+                        "surface-bright": "#31394d",
+                        "surface-container-highest": "#2d3449",
+                        "on-secondary-fixed": "#001849",
+                        "on-error-container": "#ffdad6",
+                        "secondary-fixed": "#dae1ff",
+                        "surface-container-lowest": "#060e20",
+                        "tertiary": "#ffffff",
+                        "secondary-container": "#0266ff",
+                        "on-tertiary-container": "#ca0a0f",
+                        "outline": "#8e9379",
+                        "on-primary": "#283500",
+                        "inverse-surface": "#dae2fd",
+                        "outline-variant": "#444933",
+                        "on-error": "#690005",
+                        "primary-fixed-dim": "#abd600",
+                        "surface-container-high": "#222a3d",
+                        "primary": "#ffffff",
+                        "on-tertiary-fixed-variant": "#930005",
+                        "surface-dim": "#0b1326",
+                        "on-secondary": "#002b75",
+                        "on-surface-variant": "#c4c9ac",
+                        "primary-container": "#c3f400",
+                        "inverse-primary": "#506600",
+                        "surface-variant": "#2d3449",
+                        "secondary": "#b3c5ff",
+                        "tertiary-container": "#ffdad5",
+                        "on-secondary-fixed-variant": "#003fa4",
+                        "on-surface": "#dae2fd",
+                        "surface": "#0b1326",
+                        "on-secondary-container": "#f9f7ff",
+                        "secondary-fixed-dim": "#b3c5ff",
+                        "on-primary-container": "#556d00",
+                        "error-container": "#93000a",
+                        "on-background": "#dae2fd",
+                        "surface-container": "#171f33",
+                        "on-tertiary": "#690003",
+                        "background": "#0b1326",
+                        "surface-tint": "#abd600"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin-mobile": "16px",
+                        "sm": "16px",
+                        "base": "4px",
+                        "xs": "8px",
+                        "margin-desktop": "32px",
+                        "xl": "48px",
+                        "lg": "32px",
+                        "md": "24px",
+                        "gutter": "16px"
+                    },
+                    "fontFamily": {
+                        "display-lg": ["Anybody"],
+                        "headline-lg-mobile": ["Anybody"],
+                        "headline-md": ["Anybody"],
+                        "label-md": ["JetBrains Mono"],
+                        "body-md": ["Hanken Grotesk"],
+                        "label-sm": ["JetBrains Mono"],
+                        "headline-lg": ["Anybody"],
+                        "body-lg": ["Hanken Grotesk"]
+                    },
+                    "fontSize": {
+                        "display-lg": ["48px", { "lineHeight": "52px", "letterSpacing": "-0.02em", "fontWeight": "800" }],
+                        "headline-lg-mobile": ["28px", { "lineHeight": "34px", "fontWeight": "700" }],
+                        "headline-md": ["24px", { "lineHeight": "30px", "fontWeight": "700" }],
+                        "label-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.05em", "fontWeight": "500" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "fontWeight": "700" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: theme('colors.background');
+            color: theme('colors.on-background');
+            font-family: theme('fontFamily.body-md');
+        }
+        
+        .glass-panel {
+            background: linear-gradient(135deg, rgba(45, 52, 73, 0.4) 0%, rgba(30, 41, 59, 0.8) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+        }
+
+        .neon-glow {
+            box-shadow: 0 0 15px rgba(195, 244, 0, 0.4);
+        }
+
+        .tab-active {
+            border-bottom: 2px solid theme('colors.primary-container');
+            color: theme('colors.primary-container');
+        }
+        
+        /* Custom scrollbar for tabs */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background min-h-screen flex flex-col pb-24 relative overflow-x-hidden">
+<!-- Ambient Background Glow -->
+<div class="fixed top-0 left-0 w-full h-full pointer-events-none z-[-1] overflow-hidden">
+<div class="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-secondary-container/20 rounded-full blur-[120px]"></div>
+<div class="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-primary-container/10 rounded-full blur-[150px]"></div>
+</div>
+<!-- TopAppBar -->
+<header class="flex justify-between items-center w-full px-margin-mobile h-16 fixed top-0 z-50 border-b border-white/10 bg-surface/60 backdrop-blur-md">
+<div class="flex items-center gap-sm">
+<div class="w-10 h-10 rounded-full bg-surface-container-high border-2 border-primary-container flex items-center justify-center overflow-hidden shrink-0">
+<img class="w-full h-full object-cover" data-alt="A macro shot of a sleek, dark metallic badge with a glowing neon green rim. Inside the badge, a stylized abstract avatar icon is etched in white light. The lighting is dramatic and moody, reflecting a high-tech sports interface environment. Intricate sci-fi details surround the badge." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCAptmvc9LWpTV-hlguKdRhcaD09tRgRjoB10zyXErdpJe5dCqAvMiGSa3EsAujTXvw411Qq45X4xsnyFTmiKmkMg3jYMW0wSb2uj29XWviI5fKqRAgRDbWiuJSyLVOZD4LPZF2U2ZMY8E3wNiK93RiM4rSHvRrZ9GJX6SvJ4i2W8GRaR5azCyjLJ756JMYN9N5ntiDMgTLOBjLTP4rqPYwfms5dkxKUaSUw0I4Z2Hc7bkjHGKE3yA8Bw"/>
+</div>
+<div class="flex flex-col">
+<span class="font-headline-md text-headline-md font-bold text-primary">GoalMaster</span>
+</div>
+</div>
+<div class="flex items-center gap-sm glass-panel px-sm py-xs rounded-full">
+<div class="flex items-center gap-base">
+<span class="material-symbols-outlined text-primary-container text-[18px]" style="font-variation-settings: 'FILL' 1;">diamond</span>
+<span class="font-label-md text-label-md text-primary-container font-bold">1,250</span>
+</div>
+<div class="w-px h-4 bg-white/20"></div>
+<div class="flex items-center gap-base">
+<span class="material-symbols-outlined text-secondary text-[18px]" style="font-variation-settings: 'FILL' 1;">toll</span>
+<span class="font-label-md text-label-md text-secondary font-bold">8,400</span>
+</div>
+</div>
+</header>
+<main class="flex-grow pt-20 px-margin-mobile flex flex-col gap-md container mx-auto max-w-4xl">
+<!-- Segmented Control (Tabs) -->
+<div class="w-full overflow-x-auto hide-scrollbar mt-sm">
+<div class="flex gap-md border-b border-white/10 pb-xs min-w-max">
+<button class="font-headline-md text-[20px] font-bold tab-active pb-xs px-xs transition-colors">Gems</button>
+<button class="font-headline-md text-[20px] font-bold text-on-surface-variant hover:text-white pb-xs px-xs transition-colors">Chip</button>
+<button class="font-headline-md text-[20px] font-bold text-on-surface-variant hover:text-white pb-xs px-xs transition-colors">Avatar</button>
+<button class="font-headline-md text-[20px] font-bold text-on-surface-variant hover:text-white pb-xs px-xs transition-colors">Takviyeler</button>
+</div>
+</div>
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile text-primary mt-sm">Gem Paketleri</h2>
+<!-- Gem Packages Grid -->
+<div class="grid grid-cols-2 md:grid-cols-3 gap-sm">
+<!-- Package 1 -->
+<div class="glass-panel rounded-xl p-md flex flex-col items-center justify-center gap-sm relative overflow-hidden group hover:border-primary-container/50 transition-colors cursor-pointer">
+<div class="absolute inset-0 bg-gradient-to-br from-primary-container/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<div class="w-16 h-16 rounded-full bg-surface-container flex items-center justify-center shadow-lg relative">
+<span class="material-symbols-outlined text-[36px] text-primary-container drop-shadow-[0_0_8px_rgba(195,244,0,0.6)]" style="font-variation-settings: 'FILL' 1;">diamond</span>
+</div>
+<div class="text-center">
+<h3 class="font-headline-md text-[20px] text-primary font-bold">100 Gems</h3>
+<p class="font-label-sm text-label-sm text-on-surface-variant mt-base">+10 Bonus</p>
+</div>
+<button class="w-full py-xs px-sm rounded-lg bg-surface-container-high border border-white/10 font-label-md text-label-md text-white font-bold group-hover:bg-primary-container group-hover:text-on-primary-container transition-all">49.99 TL</button>
+</div>
+<!-- Package 2 (Popular) -->
+<div class="glass-panel rounded-xl p-md flex flex-col items-center justify-center gap-sm relative overflow-hidden group border-primary-container/30 cursor-pointer">
+<div class="absolute top-0 right-0 bg-primary-container text-on-primary-container font-label-sm text-[10px] font-bold py-1 px-3 rounded-bl-lg">POPÜLER</div>
+<div class="absolute inset-0 bg-gradient-to-br from-primary-container/10 to-transparent opacity-100"></div>
+<div class="w-20 h-20 rounded-full bg-surface-container flex items-center justify-center shadow-lg relative">
+<span class="material-symbols-outlined text-[48px] text-primary-container drop-shadow-[0_0_12px_rgba(195,244,0,0.8)]" style="font-variation-settings: 'FILL' 1;">diamond</span>
+<div class="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center border-2 border-surface">
+<span class="material-symbols-outlined text-white text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+</div>
+</div>
+<div class="text-center">
+<h3 class="font-headline-md text-[24px] text-primary font-bold">500 Gems</h3>
+<p class="font-label-sm text-label-sm text-primary-container mt-base">+75 Bonus</p>
+</div>
+<button class="w-full py-sm px-sm rounded-lg bg-primary-container font-label-md text-label-md text-on-primary-container font-bold neon-glow transition-transform active:scale-95">199.99 TL</button>
+</div>
+<!-- Package 3 -->
+<div class="glass-panel rounded-xl p-md flex flex-col items-center justify-center gap-sm relative overflow-hidden group hover:border-primary-container/50 transition-colors cursor-pointer">
+<div class="absolute inset-0 bg-gradient-to-br from-primary-container/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<div class="w-16 h-16 rounded-full bg-surface-container flex items-center justify-center shadow-lg relative">
+<div class="flex">
+<span class="material-symbols-outlined text-[36px] text-primary-container drop-shadow-[0_0_8px_rgba(195,244,0,0.6)] -mr-3" style="font-variation-settings: 'FILL' 1;">diamond</span>
+<span class="material-symbols-outlined text-[36px] text-primary-container drop-shadow-[0_0_8px_rgba(195,244,0,0.6)]" style="font-variation-settings: 'FILL' 1;">diamond</span>
+</div>
+</div>
+<div class="text-center">
+<h3 class="font-headline-md text-[20px] text-primary font-bold">1200 Gems</h3>
+<p class="font-label-sm text-label-sm text-on-surface-variant mt-base">+200 Bonus</p>
+</div>
+<button class="w-full py-xs px-sm rounded-lg bg-surface-container-high border border-white/10 font-label-md text-label-md text-white font-bold group-hover:bg-primary-container group-hover:text-on-primary-container transition-all">399.99 TL</button>
+</div>
+<!-- Package 4 -->
+<div class="glass-panel rounded-xl p-md flex flex-col items-center justify-center gap-sm relative overflow-hidden group hover:border-primary-container/50 transition-colors cursor-pointer hidden md:flex">
+<div class="absolute inset-0 bg-gradient-to-br from-primary-container/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<div class="w-16 h-16 rounded-full bg-surface-container flex items-center justify-center shadow-lg relative">
+<span class="material-symbols-outlined text-[48px] text-primary-container drop-shadow-[0_0_8px_rgba(195,244,0,0.6)]" style="font-variation-settings: 'FILL' 1;">workspace_premium</span>
+</div>
+<div class="text-center">
+<h3 class="font-headline-md text-[20px] text-primary font-bold">2500 Gems</h3>
+<p class="font-label-sm text-label-sm text-on-surface-variant mt-base">+500 Bonus</p>
+</div>
+<button class="w-full py-xs px-sm rounded-lg bg-surface-container-high border border-white/10 font-label-md text-label-md text-white font-bold group-hover:bg-primary-container group-hover:text-on-primary-container transition-all">799.99 TL</button>
+</div>
+</div>
+<div class="flex justify-between items-end mt-md">
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile text-primary">Özel Takviyeler</h2>
+<a class="font-label-sm text-label-sm text-secondary hover:text-white transition-colors" href="#">Tümünü Gör</a>
+</div>
+<!-- Boosts List -->
+<div class="flex flex-col gap-sm">
+<!-- Boost 1 -->
+<div class="glass-panel rounded-xl p-sm flex items-center justify-between gap-sm">
+<div class="flex items-center gap-md">
+<div class="w-12 h-12 rounded-lg bg-secondary-container/20 flex items-center justify-center border border-secondary-container/50 shrink-0">
+<span class="material-symbols-outlined text-secondary-fixed text-[24px]" style="font-variation-settings: 'FILL' 1;">bolt</span>
+</div>
+<div>
+<h4 class="font-headline-md text-[18px] text-primary font-bold">2x XP Boost</h4>
+<p class="font-body-md text-sm text-on-surface-variant">1 Saat boyunca kazanılan XP 2'ye katlanır.</p>
+</div>
+</div>
+<button class="py-xs px-sm rounded-lg border-2 border-primary-container text-primary-container font-label-md font-bold flex items-center gap-xs hover:bg-primary-container hover:text-on-primary-container transition-colors shrink-0">
+                    50 <span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">diamond</span>
+</button>
+</div>
+<!-- Boost 2 -->
+<div class="glass-panel rounded-xl p-sm flex items-center justify-between gap-sm">
+<div class="flex items-center gap-md">
+<div class="w-12 h-12 rounded-lg bg-tertiary-container/20 flex items-center justify-center border border-tertiary-container/50 shrink-0">
+<span class="material-symbols-outlined text-tertiary-fixed text-[24px]" style="font-variation-settings: 'FILL' 1;">toll</span>
+</div>
+<div>
+<h4 class="font-headline-md text-[18px] text-primary font-bold">2x Chip Boost</h4>
+<p class="font-body-md text-sm text-on-surface-variant">1 Saat boyunca kazanılan Chipler 2'ye katlanır.</p>
+</div>
+</div>
+<button class="py-xs px-sm rounded-lg border-2 border-primary-container text-primary-container font-label-md font-bold flex items-center gap-xs hover:bg-primary-container hover:text-on-primary-container transition-colors shrink-0">
+                    75 <span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">diamond</span>
+</button>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-2 pb-safe h-20 border-t border-white/10 bg-surface-container shadow-lg rounded-t-xl md:hidden">
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-bright/10 w-16 h-full transition-colors rounded-lg">
+<span class="material-symbols-outlined text-[24px] mb-1">sports_soccer</span>
+<span class="font-label-sm text-label-sm">Oyna</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-bright/10 w-16 h-full transition-colors rounded-lg">
+<span class="material-symbols-outlined text-[24px] mb-1">leaderboard</span>
+<span class="font-label-sm text-label-sm">Sıralama</span>
+</button>
+<button class="flex flex-col items-center justify-center text-primary-container drop-shadow-[0_0_8px_rgba(195,244,0,0.6)] font-bold scale-110 transition-transform duration-200 w-16 h-full rounded-lg">
+<span class="material-symbols-outlined text-[28px] mb-1" style="font-variation-settings: 'FILL' 1;">shopping_cart</span>
+<span class="font-label-sm text-label-sm">Market</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-bright/10 w-16 h-full transition-colors rounded-lg">
+<span class="material-symbols-outlined text-[24px] mb-1">groups</span>
+<span class="font-label-sm text-label-sm">Sosyal</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-bright/10 w-16 h-full transition-colors rounded-lg">
+<span class="material-symbols-outlined text-[24px] mb-1">person</span>
+<span class="font-label-sm text-label-sm">Profil</span>
+</button>
+</nav>
+</body></html>

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Trivia FC - Efsane Ekle</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="db_data.js"></script>
+    <style>
+        body { background-color: #0B0F19; color: #FFFFFF; font-family: 'Inter', sans-serif; }
+        .glass-panel { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 1rem; }
+        .input-field { background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.1); color: white; width: 100%; padding: 0.75rem; border-radius: 0.5rem; margin-top: 0.25rem; }
+        .input-field:focus { outline: none; border-color: #00FFA3; }
+        select.input-field { appearance: none; }
+        .btn-primary { background-color: #00FFA3; color: #000; font-weight: bold; padding: 1rem; border-radius: 0.5rem; width: 100%; text-align: center; }
+        .btn-secondary { background-color: rgba(0, 184, 255, 0.2); color: #00B8FF; border: 1px solid #00B8FF; font-weight: bold; padding: 0.75rem; border-radius: 0.5rem; width: 100%; text-align: center; }
+        
+        /* Autocomplete Styles */
+        .autocomplete-wrapper { position: relative; }
+        .autocomplete-list { position: absolute; top: 100%; left: 0; right: 0; z-index: 50; max-height: 200px; overflow-y: auto; background-color: #1a202c; border: 1px solid #4a5568; border-top: none; border-radius: 0 0 0.5rem 0.5rem; }
+        .autocomplete-item { padding: 10px; cursor: pointer; border-bottom: 1px solid #2d3748; }
+        .autocomplete-item:hover { background-color: #2d3748; }
+    </style>
+</head>
+<body class="p-4 pb-20">
+    <div class="max-w-md mx-auto">
+        <h1 class="text-3xl font-bold text-[#00FFA3] mb-2">Efsane Ekle</h1>
+        <p class="text-gray-400 mb-6">Sisteme yeni bir futbolcu ekleyin.</p>
+
+        <!-- Netlify Form -->
+        <form id="playerForm" name="new-player" method="POST" data-netlify="true" class="space-y-6">
+            <input type="hidden" name="form-name" value="new-player" />
+            <input type="hidden" name="json_data" id="json_data">
+            
+            <div class="glass-panel p-4 space-y-4">
+                <h2 class="text-xl font-bold text-[#00B8FF]">Oyuncu Bilgileri</h2>
+                
+                <div><label class="text-sm text-gray-300">Bilinen Adı (Zorunlu)</label><input type="text" id="known_as" class="input-field" placeholder="Örn: Ronaldinho" required></div>
+                <div><label class="text-sm text-gray-300">Adı</label><input type="text" id="first_name" class="input-field" placeholder="Örn: Ronaldo de Assis"></div>
+                <div><label class="text-sm text-gray-300">Soyadı</label><input type="text" id="last_name" class="input-field" placeholder="Örn: Moreira"></div>
+                <div>
+                    <label class="text-sm text-gray-300">Uyruk</label>
+                    <select id="nationality" class="input-field">
+                        <option value="">Seçiniz...</option>
+                    </select>
+                </div>
+                <div class="flex space-x-2">
+                    <div class="flex-1"><label class="text-sm text-gray-300">Doğum Tarihi</label><input type="date" id="birth_date" class="input-field"></div>
+                    <div class="flex-1"><label class="text-sm text-gray-300">Boy (cm)</label><input type="number" id="height_cm" class="input-field" placeholder="181"></div>
+                    <div class="flex-1"><label class="text-sm text-gray-300">Top. Gol</label><input type="number" id="total_goals" class="input-field" placeholder="757"></div>
+                </div>
+                
+                <div class="flex space-x-2">
+                    <div class="flex-1"><label class="text-sm text-gray-300">Milli Maç</label><input type="number" id="international_caps" class="input-field" placeholder="Örn: 100"></div>
+                    <div class="flex-1"><label class="text-sm text-gray-300">Milli Gol</label><input type="number" id="international_goals" class="input-field" placeholder="Örn: 45"></div>
+                    <div class="flex-1"><label class="text-sm text-gray-300">Milli Asist</label><input type="number" id="international_assists" class="input-field" placeholder="Örn: 20"></div>
+                </div>
+                <div class="flex space-x-2">
+                    <div class="flex-1"><label class="text-sm text-gray-300 text-yellow-500">Milli Sarı Kart</label><input type="number" id="international_yellow_cards" class="input-field" placeholder="Örn: 5"></div>
+                    <div class="flex-1"><label class="text-sm text-gray-300 text-red-500">Milli Kır. Kart</label><input type="number" id="international_red_cards" class="input-field" placeholder="Örn: 1"></div>
+                </div>
+
+                <div>
+                    <label class="text-sm text-gray-300">Mevki</label>
+                    <select id="position" class="input-field">
+                        <option value="">Seçiniz...</option>
+                        <option value="Goalkeeper">Kaleci (Goalkeeper)</option>
+                        <option value="Defender">Defans (Defender)</option>
+                        <option value="Midfield">Orta Saha (Midfield)</option>
+                        <option value="Attack">Forvet (Attack)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="glass-panel p-4">
+                <h2 class="text-xl font-bold text-[#00B8FF] mb-4">Kariyer (Oynadığı Takımlar)</h2>
+                <div id="teamsContainer" class="space-y-4"></div>
+                <button type="button" onclick="addTeamField()" class="btn-secondary mt-4">+ Takım Ekle</button>
+            </div>
+
+            <div class="glass-panel p-4">
+                <h2 class="text-xl font-bold text-[#00B8FF] mb-4">İstatistikler</h2>
+                <div id="statsContainer" class="space-y-4"></div>
+                <button type="button" onclick="addStatField()" class="btn-secondary mt-4">+ İstatistik Ekle</button>
+            </div>
+
+            <button type="submit" class="btn-primary mt-8">VERİYİ GÖNDER (KAYDET)</button>
+        </form>
+        
+        <div id="successMsg" class="hidden mt-4 p-4 bg-[#00FFA3] text-black font-bold rounded-lg text-center">
+            Veri başarıyla kaydedildi! Netlify panelinden alabilirsiniz.
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

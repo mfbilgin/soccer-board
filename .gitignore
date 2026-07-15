@@ -1,0 +1,31 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Node.js / React Native / Expo
+node_modules/
+.expo/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+database_backup/
+backend/data/
+
+# Logs
+match_logs/
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Environments
+.env
+.env.local
