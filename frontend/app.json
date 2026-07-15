@@ -16,7 +16,7 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "package": "com.anonymous.frontend",
+      "package": "com.mfbilgin.soccerboard",
       "usesCleartextTraffic": true
     },
     "web": {
@@ -26,6 +26,18 @@
       "expo-secure-store",
       "expo-font",
       "expo-image"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "88002235-ba4c-421a-a039-2912b328d209"
+      }
+    },
+    "owner": "mfbilgin",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/88002235-ba4c-421a-a039-2912b328d209"
+    }
   }
 }
