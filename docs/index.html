@@ -123,11 +123,11 @@
         <p>Arkadaşlarınla futbol bilgini yarıştır! Doğru futbolcuları seç, hedefi tuttur ve sıralamada yüksel.</p>
 
         <!-- IMPORTANT: Update the href attribute with your actual GitHub Release APK download link -->
-        <a href="https://github.com/mfbilgin/soccer-board/releases/download/v0.0.1/app-debug.apk" class="download-btn">
+        <a id="download-btn" href="https://github.com/mfbilgin/soccer-board/releases/download/v0.0.1/app-debug.apk" class="download-btn">
             ↓ APK İNDİR (Android)
         </a>
         
-        <div class="version-info">
+        <div id="version-text" class="version-info">
             Versiyon v1.0.0 (BETA)
         </div>
 
@@ -147,5 +147,28 @@
         </div>
     </div>
 
+    <script>
+        async function fetchLatestRelease() {
+            try {
+                const response = await fetch('https://api.github.com/repos/mfbilgin/soccer-board/releases/latest');
+                const data = await response.json();
+                
+                if (data.tag_name) {
+                    document.getElementById('version-text').textContent = 'Versiyon ' + data.tag_name + ' (BETA)';
+                }
+                
+                if (data.assets && data.assets.length > 0) {
+                    const apkAsset = data.assets.find(asset => asset.name.endsWith('.apk'));
+                    if (apkAsset) {
+                        document.getElementById('download-btn').href = apkAsset.browser_download_url;
+                    }
+                }
+            } catch (error) {
+                console.error('Sürüm bilgisi çekilemedi:', error);
+            }
+        }
+        
+        fetchLatestRelease();
+    </script>
 </body>
 </html>
