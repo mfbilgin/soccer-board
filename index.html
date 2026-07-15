@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Futbol Tahmin Oyunu</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #051A05; /* COLORS.background from the app */
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            text-align: center;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 600px;
+            padding: 40px 20px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 30px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            animation: fadeIn 1s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+            filter: drop-shadow(0 0 20px rgba(195, 244, 0, 0.5));
+        }
+
+        h1 {
+            color: #C3F400; /* COLORS.primary */
+            font-weight: 900;
+            font-size: 36px;
+            margin-bottom: 10px;
+            letter-spacing: -1px;
+            text-transform: uppercase;
+        }
+
+        p {
+            color: #A0A0A0; /* COLORS.textMuted */
+            font-size: 18px;
+            margin-bottom: 40px;
+            line-height: 1.6;
+        }
+
+        .download-btn {
+            display: inline-block;
+            background-color: #C3F400;
+            color: #051A05;
+            text-decoration: none;
+            font-weight: 900;
+            font-size: 20px;
+            padding: 20px 40px;
+            border-radius: 20px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 20px rgba(195, 244, 0, 0.2);
+        }
+
+        .download-btn:hover {
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 15px 30px rgba(195, 244, 0, 0.4);
+            background-color: #d1ff1a;
+        }
+
+        .download-btn:active {
+            transform: translateY(2px);
+        }
+
+        .version-info {
+            margin-top: 20px;
+            font-size: 14px;
+            color: rgba(255,255,255,0.5);
+            font-family: monospace;
+        }
+
+        .features {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 50px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding-top: 30px;
+        }
+
+        .feature {
+            flex: 1;
+        }
+
+        .feature-icon {
+            font-size: 30px;
+            margin-bottom: 10px;
+        }
+
+        .feature-text {
+            font-size: 14px;
+            color: #fff;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="icon">⚽</div>
+        <h1>Futbol Tahmin</h1>
+        <p>Arkadaşlarınla futbol bilgini yarıştır! Doğru futbolcuları seç, hedefi tuttur ve sıralamada yüksel.</p>
+
+        <!-- IMPORTANT: Update the href attribute with your actual GitHub Release APK download link -->
+        <a href="https://github.com/mfbilgin/soccer-board/releases/download/v0.0.1/app-debug.apk" class="download-btn">
+            ↓ APK İNDİR (Android)
+        </a>
+        
+        <div class="version-info">
+            Versiyon v1.0.0 (BETA)
+        </div>
+
+        <div class="features">
+            <div class="feature">
+                <div class="feature-icon">🎮</div>
+                <div class="feature-text">Multiplayer</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">⚡</div>
+                <div class="feature-text">Canlı Oyna</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">🏆</div>
+                <div class="feature-text">Liderlik Tablosu</div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
