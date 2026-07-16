@@ -11,7 +11,7 @@ from routers.auth import get_current_user
 
 router = APIRouter(prefix="/api/mode31", tags=["Mode 3.1: Kariyer İstatistiği Avı"])
 
-CLUB_METRICS = ["goals", "assists", "appearances", "yellow_cards", "red_cards", "minutes_played"]
+CLUB_METRICS = ["goals", "assists", "appearances", "yellow_cards", "minutes_played"]
 INT_METRICS = ["goals", "assists", "caps"]
 
 POPULAR_LEAGUES = {
@@ -51,7 +51,7 @@ def generate_puzzle(db: Session = Depends(get_db)):
             func.sum(metric_column).label("total_stat")
         ).group_by(models.PlayerNationalStats.player_id) \
          .having(func.sum(metric_column) > 0) \
-         .order_by(func.sum(metric_column).desc()) \
+         .order_by(func.random()) \
          .limit(50).all()
          
     else:
@@ -68,7 +68,7 @@ def generate_puzzle(db: Session = Depends(get_db)):
         ).filter(models.PlayerClubStats.competition_id == comp.id) \
          .group_by(models.PlayerClubStats.player_id) \
          .having(func.sum(metric_column) > 0) \
-         .order_by(func.sum(metric_column).desc()) \
+         .order_by(func.random()) \
          .limit(50).all()
 
     valid_players = [{"id": p[0], "stat": p[1]} for p in top_players_query]
