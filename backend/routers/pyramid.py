@@ -36,10 +36,10 @@ def generate_pyramid(db: Session = Depends(get_db)):
         top_players = db.query(
             models.Player.id,
             models.Player.known_as,
-            func.sum(models.PlayerNationalStats.goals).label('total_stat')
+            func.sum(models.PlayerNationalStat.goals).label('total_stat')
         ).join(
-            models.PlayerNationalStats, models.PlayerNationalStats.player_id == models.Player.id
-        ).group_by(models.Player.id).having(func.sum(models.PlayerNationalStats.goals) > 0).order_by(func.sum(models.PlayerNationalStats.goals).desc()).limit(10).all()
+            models.PlayerNationalStat, models.PlayerNationalStat.player_id == models.Player.id
+        ).group_by(models.Player.id).having(func.sum(models.PlayerNationalStat.goals) > 0).order_by(func.sum(models.PlayerNationalStat.goals).desc()).limit(10).all()
         
         title = "Milli Takım"
         subtitle = "En Çok Gol Atanlar"
@@ -62,7 +62,7 @@ def generate_pyramid(db: Session = Depends(get_db)):
         league_name = LEAGUES[league_code]
         stat_type = random.choice(STATS)
         
-        stat_col = getattr(models.PlayerClubStats, stat_type)
+        stat_col = getattr(models.PlayerClubStat, stat_type)
         
         comp = db.query(models.Competition).filter(models.Competition.name == league_code).first()
         if not comp:
@@ -74,9 +74,9 @@ def generate_pyramid(db: Session = Depends(get_db)):
             models.Player.known_as, 
             func.sum(stat_col).label('total_stat')
         ).join(
-            models.PlayerClubStats, models.PlayerClubStats.player_id == models.Player.id
+            models.PlayerClubStat, models.PlayerClubStat.player_id == models.Player.id
         ).filter(
-            models.PlayerClubStats.competition_id == comp.id
+            models.PlayerClubStat.competition_id == comp.id
         ).group_by(models.Player.id).having(func.sum(stat_col) > 0).order_by(func.sum(stat_col).desc()).limit(10).all()
         
         if len(top_players) < 10:
@@ -104,7 +104,7 @@ def generate_pyramid(db: Session = Depends(get_db)):
         team_name = random.choice(TEAMS)
         stat_type = random.choice(STATS)
         
-        stat_col = getattr(models.PlayerClubStats, stat_type)
+        stat_col = getattr(models.PlayerClubStat, stat_type)
             
         title = team_name
         if stat_type == 'goals':
@@ -126,9 +126,9 @@ def generate_pyramid(db: Session = Depends(get_db)):
             models.Player.known_as,
             func.sum(stat_col).label('total_stat')
         ).join(
-            models.PlayerClubStats, models.PlayerClubStats.player_id == models.Player.id
+            models.PlayerClubStat, models.PlayerClubStat.player_id == models.Player.id
         ).filter(
-            models.PlayerClubStats.team_id == team.id
+            models.PlayerClubStat.team_id == team.id
         ).group_by(
             models.Player.id
         ).having(

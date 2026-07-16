@@ -30,8 +30,8 @@ def ensure_cache(db: Session):
         models.Player.birth_date, 
         models.Player.nationality, 
         models.Player.position,
-        func.coalesce(func.sum(models.PlayerNationalStats.caps), 0).label('total_caps')
-    ).outerjoin(models.PlayerNationalStats).group_by(models.Player.id).all()
+        func.coalesce(func.sum(models.PlayerNationalStat.caps), 0).label('total_caps')
+    ).outerjoin(models.PlayerNationalStat).group_by(models.Player.id).all()
     
     for p in players:
         PLAYER_CACHE.append({
@@ -117,12 +117,12 @@ def search_entity(
         # Oyuncu Ara - Önceliklendirme: Popülerlik (Milli Maç) > Tam eşleşme > Başlayan > Kelime Başı > İçinde geçen ve isim kısalığı
         players = db.query(
             models.Player,
-            func.coalesce(func.sum(models.PlayerNationalStats.caps), 0).label('total_caps')
-        ).outerjoin(models.PlayerNationalStats).filter(
+            func.coalesce(func.sum(models.PlayerNationalStat.caps), 0).label('total_caps')
+        ).outerjoin(models.PlayerNationalStat).filter(
             models.Player.search_name.ilike(f"%{normalized_q}%") | models.Player.known_as.ilike(f"%{q}%")
         ).group_by(models.Player.id).order_by(
             models.Player.is_active.desc(),
-            func.coalesce(func.sum(models.PlayerNationalStats.caps), 0).desc(),
+            func.coalesce(func.sum(models.PlayerNationalStat.caps), 0).desc(),
             case(
                 (models.Player.known_as.ilike(q), 1),
                 (models.Player.search_name.ilike(normalized_q), 1),

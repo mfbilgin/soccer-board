@@ -11,7 +11,7 @@ from routers.auth import get_current_user
 
 router = APIRouter(prefix="/api/mode31", tags=["Mode 3.1: Kariyer İstatistiği Avı"])
 
-CLUB_METRICS = ["goals", "assists", "appearances", "yellow_cards", "minutes_played"]
+CLUB_METRICS = ["goals", "assists", "appearances", "yellow_cards", "red_cards", "minutes_played"]
 INT_METRICS = ["goals", "assists", "caps"]
 
 POPULAR_LEAGUES = {
@@ -43,33 +43,40 @@ def generate_puzzle(db: Session = Depends(get_db)):
     
     if league_code == "INT":
         metric = random.choice(INT_METRICS)
-        metric_column = getattr(models.PlayerNationalStats, metric)
+        metric_column = getattr(models.PlayerNationalStat, metric)
         
-        # Group by player to get total national stats (in case of multiple rows, though national might be aggregated)
+        pool_size = random.choice([50, 200, 1000, 5000])
         top_players_query = db.query(
-            models.PlayerNationalStats.player_id,
+            models.PlayerNationalStat.player_id,
             func.sum(metric_column).label("total_stat")
-        ).group_by(models.PlayerNationalStats.player_id) \
+        ).group_by(models.PlayerNationalStat.player_id) \
          .having(func.sum(metric_column) > 0) \
-         .order_by(func.random()) \
-         .limit(50).all()
+         .order_by(func.sum(metric_column).desc()) \
+         .limit(pool_size).all()
+         
+        if len(top_players_query) > 50:
+            top_players_query = random.sample(top_players_query, 50)
          
     else:
         metric = random.choice(CLUB_METRICS)
-        metric_column = getattr(models.PlayerClubStats, metric)
+        metric_column = getattr(models.PlayerClubStat, metric)
         
         comp = db.query(models.Competition).filter(models.Competition.name == league_code).first()
         if not comp:
             raise HTTPException(status_code=500, detail="League not found in DB")
             
+        pool_size = random.choice([50, 200, 1000, 5000])
         top_players_query = db.query(
-            models.PlayerClubStats.player_id,
+            models.PlayerClubStat.player_id,
             func.sum(metric_column).label("total_stat")
-        ).filter(models.PlayerClubStats.competition_id == comp.id) \
-         .group_by(models.PlayerClubStats.player_id) \
+        ).filter(models.PlayerClubStat.competition_id == comp.id) \
+         .group_by(models.PlayerClubStat.player_id) \
          .having(func.sum(metric_column) > 0) \
-         .order_by(func.random()) \
-         .limit(50).all()
+         .order_by(func.sum(metric_column).desc()) \
+         .limit(pool_size).all()
+         
+        if len(top_players_query) > 50:
+            top_players_query = random.sample(top_players_query, 50)
 
     valid_players = [{"id": p[0], "stat": p[1]} for p in top_players_query]
     
@@ -109,13 +116,13 @@ def validate_single(payload: dict, db: Session = Depends(get_db)):
         if metric not in INT_METRICS:
             return {"valid": False, "message": f"Milli takım için {metric} geçersiz."}
         
-        caps_total = db.query(func.sum(models.PlayerNationalStats.caps)).filter(
-            models.PlayerNationalStats.player_id == player_id
+        caps_total = db.query(func.sum(models.PlayerNationalStat.caps)).filter(
+            models.PlayerNationalStat.player_id == player_id
         ).scalar() or 0
         
         if caps_total > 0:
-            col = getattr(models.PlayerNationalStats, metric)
-            total = db.query(func.sum(col)).filter(models.PlayerNationalStats.player_id == player_id).scalar() or 0
+            col = getattr(models.PlayerNationalStat, metric)
+            total = db.query(func.sum(col)).filter(models.PlayerNationalStat.player_id == player_id).scalar() or 0
             return {"valid": True, "value": total}
         else:
             return {"valid": False, "message": "Bu oyuncu milli takımda oynamamış."}
@@ -127,16 +134,16 @@ def validate_single(payload: dict, db: Session = Depends(get_db)):
         if not comp:
             return {"valid": False, "message": "Lig bulunamadı."}
             
-        apps_total = db.query(func.sum(models.PlayerClubStats.appearances)).filter(
-            models.PlayerClubStats.player_id == player_id,
-            models.PlayerClubStats.competition_id == comp.id
+        apps_total = db.query(func.sum(models.PlayerClubStat.appearances)).filter(
+            models.PlayerClubStat.player_id == player_id,
+            models.PlayerClubStat.competition_id == comp.id
         ).scalar() or 0
         
         if apps_total > 0:
-            col = getattr(models.PlayerClubStats, metric)
+            col = getattr(models.PlayerClubStat, metric)
             total = db.query(func.sum(col)).filter(
-                models.PlayerClubStats.player_id == player_id,
-                models.PlayerClubStats.competition_id == comp.id
+                models.PlayerClubStat.player_id == player_id,
+                models.PlayerClubStat.competition_id == comp.id
             ).scalar() or 0
             return {"valid": True, "value": total}
         else:
@@ -159,14 +166,14 @@ def validate_submission(payload: dict, db: Session = Depends(get_db), current_us
     for pid in player_ids:
         # validate-single mantığıyla çek
         if league == "INT":
-            col = getattr(models.PlayerNationalStats, metric)
-            val = db.query(func.sum(col)).filter(models.PlayerNationalStats.player_id == pid).scalar()
+            col = getattr(models.PlayerNationalStat, metric)
+            val = db.query(func.sum(col)).filter(models.PlayerNationalStat.player_id == pid).scalar()
         else:
             comp = db.query(models.Competition).filter(models.Competition.name == league).first()
-            col = getattr(models.PlayerClubStats, metric)
+            col = getattr(models.PlayerClubStat, metric)
             val = db.query(func.sum(col)).filter(
-                models.PlayerClubStats.player_id == pid,
-                models.PlayerClubStats.competition_id == comp.id if comp else -1
+                models.PlayerClubStat.player_id == pid,
+                models.PlayerClubStat.competition_id == comp.id if comp else -1
             ).scalar()
             
         val = val or 0

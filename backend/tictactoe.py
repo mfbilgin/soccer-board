@@ -24,13 +24,13 @@ class TicTacToeEngine:
         popular_team_ids = [t[0] for t in elite_teams]
 
         top_players = self.db.query(
-            models.PlayerClubStats.player_id
-        ).group_by(models.PlayerClubStats.player_id).order_by(
-            func.sum(models.PlayerClubStats.appearances).desc()
+            models.PlayerClubStat.player_id
+        ).group_by(models.PlayerClubStat.player_id).order_by(
+            func.sum(models.PlayerClubStat.appearances).desc()
         ).limit(1500).all()
         popular_player_ids = [p[0] for p in top_players]
 
-        all_histories = self.db.query(models.PlayerClubStats.player_id, models.PlayerClubStats.team_id).all()
+        all_histories = self.db.query(models.PlayerClubStat.player_id, models.PlayerClubStat.team_id).all()
         
         team_players = {}
         player_teams = {}
@@ -179,14 +179,14 @@ class TicTacToeEngine:
         if grid_type == 1:
             # Kullanıcı bir Player ID'si tahmin etti. 
             # Bu oyuncu Row (Team) ve Col (Team) takımlarında oynadı mı?
-            played_row = self.db.query(models.PlayerClubStats).filter(
-                models.PlayerClubStats.player_id == guess_id,
-                models.PlayerClubStats.team_id == row_id
+            played_row = self.db.query(models.PlayerClubStat).filter(
+                models.PlayerClubStat.player_id == guess_id,
+                models.PlayerClubStat.team_id == row_id
             ).first()
             
-            played_col = self.db.query(models.PlayerClubStats).filter(
-                models.PlayerClubStats.player_id == guess_id,
-                models.PlayerClubStats.team_id == col_id
+            played_col = self.db.query(models.PlayerClubStat).filter(
+                models.PlayerClubStat.player_id == guess_id,
+                models.PlayerClubStat.team_id == col_id
             ).first()
             
             if played_row and played_col:
@@ -214,14 +214,14 @@ class TicTacToeEngine:
         elif grid_type == 2:
             # Kullanıcı bir Team ID'si tahmin etti.
             # Row (Player) ve Col (Player) bu takımda oynadı mı?
-            played_row = self.db.query(models.PlayerClubStats).filter(
-                models.PlayerClubStats.player_id == row_id,
-                models.PlayerClubStats.team_id == guess_id
+            played_row = self.db.query(models.PlayerClubStat).filter(
+                models.PlayerClubStat.player_id == row_id,
+                models.PlayerClubStat.team_id == guess_id
             ).first()
             
-            played_col = self.db.query(models.PlayerClubStats).filter(
-                models.PlayerClubStats.player_id == col_id,
-                models.PlayerClubStats.team_id == guess_id
+            played_col = self.db.query(models.PlayerClubStat).filter(
+                models.PlayerClubStat.player_id == col_id,
+                models.PlayerClubStat.team_id == guess_id
             ).first()
             
             if played_row and played_col:
