@@ -119,7 +119,8 @@ def process_player(db, player):
             goals = _to_int(_get_val(event_stats, ["goalsScoredTotalOfficial", "goalsScoredTotal"]))
             assists = _to_int(_get_val(event_stats, ["assistsOfficial", "assists"]))
             yc = _to_int(_get_val(card_stats, ["yellowCardNet", "yellowCardGross", "yellowCards"]))
-            rc = _to_int(_get_val(card_stats, ["redCard", "redCards", "redCardNet", "yellowRedCard"]))
+            rc_val = _get_val(card_stats, ["redCard", "redCards", "redCardNet", "yellowRedCard"])
+            rc = 1 if isinstance(rc_val, dict) else _to_int(rc_val)
             mins = _to_int(play_stats.get("playedMinutes", 0))
             is_starting = 1 if play_stats.get("isStarting") else 0
             pen_goals = _to_int(event_stats.get("penaltyShooterGoalsScored", 0))
