@@ -1,0 +1,14 @@
+venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+*.sqlite
+*.sqlite3
+match_logs/
+.git/
+.github/
+.vscode/
+.env
