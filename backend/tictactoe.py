@@ -21,8 +21,8 @@ class TicTacToeEngine:
 
     def _initialize_pools(self):
         print("Initializing TicTacToe cache in memory...")
-        elite_teams = self.db.query(models.Team.id).filter(models.Team.known_as != None).all()
-        popular_team_ids = [t[0] for t in elite_teams]
+        top_teams = self.db.query(models.PlayerClubStat.team_id).group_by(models.PlayerClubStat.team_id).order_by(func.sum(models.PlayerClubStat.appearances).desc()).limit(150).all()
+        popular_team_ids = [t[0] for t in top_teams]
 
         top_players = self.db.query(
             models.PlayerClubStat.player_id
@@ -159,9 +159,9 @@ class TicTacToeEngine:
             col_map = {t.id: t for t in db_cols}
             
             for rid in row_ids:
-                row_items.append({"id": rid, "name": row_map[rid].known_as if row_map[rid].known_as else row_map[rid].name})
+                row_items.append({"id": rid, "name": row_map[rid].short_name if row_map[rid].short_name else row_map[rid].name})
             for cid in col_ids:
-                col_items.append({"id": cid, "name": col_map[cid].known_as if col_map[cid].known_as else col_map[cid].name})
+                col_items.append({"id": cid, "name": col_map[cid].short_name if col_map[cid].short_name else col_map[cid].name})
                 
         elif grid_type == 2:
             # Oyuncu detayı
@@ -208,16 +208,16 @@ class TicTacToeEngine:
             if not played_row and not played_col:
                 row_t = self.db.query(models.Team).filter(models.Team.id == row_id).first()
                 col_t = self.db.query(models.Team).filter(models.Team.id == col_id).first()
-                r_name = (row_t.known_as if row_t.known_as else row_t.name) if row_t else ""
-                c_name = (col_t.known_as if col_t.known_as else col_t.name) if col_t else ""
+                r_name = (row_t.short_name if row_t.short_name else row_t.name) if row_t else ""
+                c_name = (col_t.short_name if col_t.short_name else col_t.name) if col_t else ""
                 return False, f"Yanlış Cevap. {p_name}, ne {r_name} ne de {c_name} takımında oynadı.", None
             elif not played_row:
                 row_t = self.db.query(models.Team).filter(models.Team.id == row_id).first()
-                r_name = (row_t.known_as if row_t.known_as else row_t.name) if row_t else ""
+                r_name = (row_t.short_name if row_t.short_name else row_t.name) if row_t else ""
                 return False, f"Yanlış Cevap. {p_name}, {r_name} takımında hiç oynamadı!", None
             else:
                 col_t = self.db.query(models.Team).filter(models.Team.id == col_id).first()
-                c_name = (col_t.known_as if col_t.known_as else col_t.name) if col_t else ""
+                c_name = (col_t.short_name if col_t.short_name else col_t.name) if col_t else ""
                 return False, f"Yanlış Cevap. {p_name}, {c_name} takımında hiç oynamadı!", None
             
         elif grid_type == 2:
@@ -235,11 +235,11 @@ class TicTacToeEngine:
             
             if played_row and played_col:
                 team = self.db.query(models.Team).filter(models.Team.id == guess_id).first()
-                team_name = (team.known_as if team.known_as else team.name) if team else "Bilinmeyen"
+                team_name = (team.short_name if team.short_name else team.name) if team else "Bilinmeyen"
                 return True, "Doğru Cevap!", team_name
                 
             team = self.db.query(models.Team).filter(models.Team.id == guess_id).first()
-            t_name = (team.known_as if team.known_as else team.name) if team else "Bu takım"
+            t_name = (team.short_name if team.short_name else team.name) if team else "Bu takım"
             
             if not played_row and not played_col:
                 row_p = self.db.query(models.Player).filter(models.Player.id == row_id).first()
@@ -280,5 +280,5 @@ class TicTacToeEngine:
                     common = list(r_teams & c_teams)
                     if common:
                         t = self.db.query(models.Team).filter(models.Team.id == common[0]).first()
-                        answers[f"{r}-{c}"] = (t.known_as if t.known_as else t.name) if t else "Bilinmeyen Takım"
+                        answers[f"{r}-{c}"] = (t.short_name if t.short_name else t.name) if t else "Bilinmeyen Takım"
         return answers
