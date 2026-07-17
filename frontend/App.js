@@ -16,6 +16,7 @@ import RegisterScreen from './screens/auth/RegisterScreen';
 import HomeScreen from './screens/main/HomeScreen';
 import SingleplayerScreen from './screens/singleplayer/SingleplayerScreen';
 import TicTacToeScreen from './screens/singleplayer/TicTacToeScreen';
+import TicTacToeResultScreen from './screens/singleplayer/TicTacToeResultScreen';
 import PyramidScreen from './screens/singleplayer/PyramidScreen';
 import CareerGuessScreen from './screens/singleplayer/CareerGuessScreen';
 import LobbyScreen from './screens/multiplayer/LobbyScreen';
@@ -101,6 +102,7 @@ export default function App() {
         <Stack.Screen name="MainTabs" component={MainTabs} options={{ headerShown: false }} />
         <Stack.Screen name="Singleplayer" component={SingleplayerScreen} options={{ headerShown: false }} />
         <Stack.Screen name="TicTacToe" component={TicTacToeScreen} options={{ title: 'Futbol Tic-Tac-Toe' }} />
+        <Stack.Screen name="TicTacToeResult" component={TicTacToeResultScreen} options={{ title: 'Oyun Sonucu', headerShown: false }} />
         <Stack.Screen name="Pyramid" component={PyramidScreen} options={{ title: 'Top 10 Piramidi' }} />
         <Stack.Screen name="CareerGuess" component={CareerGuessScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Lobby" component={LobbyScreen} options={{ headerShown: false }} />

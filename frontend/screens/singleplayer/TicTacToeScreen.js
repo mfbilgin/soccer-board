@@ -22,11 +22,7 @@ export default function TicTacToeScreen({ route }) {
     // Matrisin tüm hücreleri dolduysa oyunu bitir
     if (Object.keys(cellAnswers).length === 9 && !isSurrendered) {
       setTimeout(() => {
-        Alert.alert(
-          "İnanılmaz!",
-          "Tüm matrisi kusursuz bir şekilde tamamladın. Futbol bilgin gerçekten üst düzey!",
-          [{ text: "Yeni Oyuna Geç", onPress: fetchNewGrid }]
-        );
+        surrenderGame();
       }, 500); // UI güncellendikten yarım saniye sonra göster
     }
   }, [cellAnswers]);
@@ -85,28 +81,19 @@ export default function TicTacToeScreen({ route }) {
 
   const surrenderGame = async () => {
     try {
+      const correctCount = Object.values(cellAnswers).filter(a => !a.isSurrender).length;
       const payload = {
         grid_type: grid.type,
         row_ids: grid.rows.map(r => r.id),
-        col_ids: grid.cols.map(c => c.id)
+        col_ids: grid.cols.map(c => c.id),
+        correct_count: correctCount
       };
       const res = await api.post('/game/tictactoe/surrender', payload);
       const answers = res.data.answers;
+      const xp_gained = res.data.xp_gained || 0;
       
-      const newAnswers = {...cellAnswers};
-      for (let rIdx=0; rIdx<3; rIdx++) {
-        for (let cIdx=0; cIdx<3; cIdx++) {
-          const key = `${rIdx}-${cIdx}`;
-          if (!newAnswers[key]) {
-            const rowId = grid.rows[rIdx].id;
-            const colId = grid.cols[cIdx].id;
-            const ansName = answers[`${rowId}-${colId}`] || "?";
-            newAnswers[key] = { id: -1, name: ansName, isSurrender: true };
-          }
-        }
-      }
-      setCellAnswers(newAnswers);
       setIsSurrendered(true);
+      navigation.replace('TicTacToeResult', { grid, cellAnswers, answers, xp_gained });
     } catch (err) {
       Alert.alert("Hata", "Pes etme işlemi başarısız oldu.");
     }
@@ -192,7 +179,7 @@ export default function TicTacToeScreen({ route }) {
       <View style={{flexDirection: 'row', justifyContent: 'center', gap: 10, marginTop: 20}}>
         {(!isSurrendered && Object.keys(cellAnswers).length < 9) && (
           <TouchableOpacity style={[styles.newGameBtn, {backgroundColor: '#e74c3c'}]} onPress={surrenderGame}>
-            <Text style={styles.newGameBtnText}>Pes Et</Text>
+            <Text style={styles.newGameBtnText}>Oyunu Bitir</Text>
           </TouchableOpacity>
         )}
         <TouchableOpacity style={styles.newGameBtn} onPress={fetchNewGrid}>

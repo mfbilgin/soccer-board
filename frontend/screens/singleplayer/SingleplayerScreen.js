@@ -8,8 +8,8 @@ const { width } = Dimensions.get('window');
 
 const GAME_MODES = [
     { id: 'mode_3_1', title: 'Hedef Tutturma', icon: 'scan-circle-outline', desc: 'Kariyer istatistiklerini birleştirerek hedefe ulaş.', route: 'TargetScore', params: {}, active: true },
-    { id: 'tictactoe_1', title: 'Takım Matrisi', icon: 'grid-outline', desc: 'Takımların ortak oyuncularını bul.', route: 'TicTacToe', params: { gridType: 1 }, active: true },
-    { id: 'tictactoe_2', title: 'Oyuncu Matrisi', icon: 'people-outline', desc: 'Oyuncuların ortak takımlarını bul.', route: 'TicTacToe', params: { gridType: 2 }, active: true },
+    { id: 'tictactoe_1', title: 'Takım XOX', icon: 'grid-outline', desc: 'Takımların ortak oyuncularını bul.', route: 'TicTacToe', params: { gridType: 1 }, active: true },
+    { id: 'tictactoe_2', title: 'Oyuncu XOX', icon: 'people-outline', desc: 'Oyuncuların ortak takımlarını bul.', route: 'TicTacToe', params: { gridType: 2 }, active: true },
     { id: 'pyramid', title: 'Top 10 Piramidi', icon: 'podium-outline', desc: 'En iyi 10 oyuncuyu tahmin et.', route: 'Pyramid', params: {}, active: true },
     { id: 'career_guess', title: 'Kariyer Yolu', icon: 'airplane-outline', desc: 'Transfer geçmişine bakarak futbolcuyu tahmin et.', route: 'CareerGuess', params: {}, active: true },
     { id: 'tictactoe_4x4', title: '4x4 Matris', icon: 'apps-outline', desc: 'Devasa 4x4 matrisi çöz.', route: 'TicTacToe4x4', params: {}, active: false },
