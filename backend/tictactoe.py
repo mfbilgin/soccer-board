@@ -15,6 +15,7 @@ class TicTacToeEngine:
             self._initialize_pools()
         self.popular_team_ids = _CACHE['popular_team_ids']
         self.popular_player_ids = _CACHE['popular_player_ids']
+        self.elite_player_ids = _CACHE['elite_player_ids']
         self.team_players = _CACHE['team_players']
         self.player_teams = _CACHE['player_teams']
 
@@ -29,6 +30,13 @@ class TicTacToeEngine:
             func.sum(models.PlayerClubStat.appearances).desc()
         ).limit(1500).all()
         popular_player_ids = [p[0] for p in top_players]
+
+        elite_players = self.db.query(
+            models.PlayerClubStat.player_id
+        ).group_by(models.PlayerClubStat.player_id).order_by(
+            func.sum(models.PlayerClubStat.appearances).desc()
+        ).limit(150).all()
+        elite_player_ids = [p[0] for p in elite_players]
 
         all_histories = self.db.query(models.PlayerClubStat.player_id, models.PlayerClubStat.team_id).all()
         
@@ -46,6 +54,7 @@ class TicTacToeEngine:
 
         _CACHE['popular_team_ids'] = popular_team_ids
         _CACHE['popular_player_ids'] = popular_player_ids
+        _CACHE['elite_player_ids'] = elite_player_ids
         _CACHE['team_players'] = team_players
         _CACHE['player_teams'] = player_teams
         print("Cache initialized!")
@@ -101,13 +110,13 @@ class TicTacToeEngine:
         raise Exception("Failed to generate a valid Type 1 grid.")
 
     def generate_type2_grid(self) -> Dict:
-        """Oyuncu x Oyuncu matrisi üretir (Akıllı Seçim)"""
+        """Oyuncu x Oyuncu matrisi üretir (Akıllı Seçim - Elite)"""
         for _ in range(500):
-            r1 = random.choice(self.popular_player_ids)
+            r1 = random.choice(self.elite_player_ids)
             
             r1_teams = self.player_teams.get(r1, set())
             valid_col_ids = []
-            for p_id in self.popular_player_ids:
+            for p_id in self.elite_player_ids:
                 if p_id != r1 and bool(r1_teams & self.player_teams.get(p_id, set())):
                     valid_col_ids.append(p_id)
             
@@ -117,7 +126,7 @@ class TicTacToeEngine:
             cols = random.sample(valid_col_ids, 3)
             
             valid_row_candidates = []
-            for candidate in self.popular_player_ids:
+            for candidate in self.elite_player_ids:
                 if candidate == r1 or candidate in cols:
                     continue
                 if self._check_player_intersection(candidate, cols[0]) and \
@@ -248,3 +257,28 @@ class TicTacToeEngine:
                 return False, f"Yanlış Cevap. {c_name}, {t_name} takımında hiç oynamadı!", None
 
         return False, "Geçersiz matris türü.", None
+
+    def get_answers(self, grid_type: int, row_ids: List[int], col_ids: List[int]) -> Dict[str, str]:
+        """Boş kalan hücreler için örnek cevaplar döndürür"""
+        answers = {}
+        if grid_type == 1:
+            for r in row_ids:
+                for c in col_ids:
+                    r_players = self.team_players.get(r, set())
+                    c_players = self.team_players.get(c, set())
+                    common = list(r_players & c_players)
+                    if common:
+                        # Popüler olana öncelik ver
+                        common.sort(key=lambda pid: self.popular_player_ids.index(pid) if pid in self.popular_player_ids else 9999)
+                        p = self.db.query(models.Player).filter(models.Player.id == common[0]).first()
+                        answers[f"{r}-{c}"] = p.known_as if p else "Bilinmeyen Oyuncu"
+        elif grid_type == 2:
+            for r in row_ids:
+                for c in col_ids:
+                    r_teams = self.player_teams.get(r, set())
+                    c_teams = self.player_teams.get(c, set())
+                    common = list(r_teams & c_teams)
+                    if common:
+                        t = self.db.query(models.Team).filter(models.Team.id == common[0]).first()
+                        answers[f"{r}-{c}"] = (t.known_as if t.known_as else t.name) if t else "Bilinmeyen Takım"
+        return answers

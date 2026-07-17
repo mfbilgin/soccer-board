@@ -97,6 +97,20 @@ def make_guess(guess: schemas.GuessRequest, db: Session = Depends(get_db)):
         "matched_name": matched_name
     }
 
+from pydantic import BaseModel
+from typing import List
+
+class SurrenderRequest(BaseModel):
+    grid_type: int
+    row_ids: List[int]
+    col_ids: List[int]
+
+@router.post("/surrender")
+def surrender_game(req: SurrenderRequest, db: Session = Depends(get_db)):
+    engine = TicTacToeEngine(db)
+    answers = engine.get_answers(req.grid_type, req.row_ids, req.col_ids)
+    return {"answers": answers}
+
 @router.get("/search", response_model=schemas.SearchResponse)
 def search_entity(
     q: str = Query(..., min_length=2, description="Arama metni"),

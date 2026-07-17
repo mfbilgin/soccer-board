@@ -12,6 +12,7 @@ export default function TicTacToeScreen({ route }) {
   const [searchVisible, setSearchVisible] = useState(false);
   const [activeCell, setActiveCell] = useState(null); // {rIdx, cIdx, rowId, colId}
   const [cellAnswers, setCellAnswers] = useState({}); // key: `${rIdx}-${cIdx}`, value: item (oyuncu/takım resim vs)
+  const [isSurrendered, setIsSurrendered] = useState(false);
 
   useEffect(() => {
     fetchNewGrid();
@@ -19,7 +20,7 @@ export default function TicTacToeScreen({ route }) {
 
   useEffect(() => {
     // Matrisin tüm hücreleri dolduysa oyunu bitir
-    if (Object.keys(cellAnswers).length === 9) {
+    if (Object.keys(cellAnswers).length === 9 && !isSurrendered) {
       setTimeout(() => {
         Alert.alert(
           "İnanılmaz!",
@@ -33,6 +34,7 @@ export default function TicTacToeScreen({ route }) {
   const fetchNewGrid = async () => {
     setLoading(true);
     setCellAnswers({});
+    setIsSurrendered(false);
     try {
       const gridType = route.params?.gridType || 1;
       const res = await api.get('/game/tictactoe/grid?type=' + gridType);
@@ -45,8 +47,8 @@ export default function TicTacToeScreen({ route }) {
   };
 
   const handleCellPress = (rIdx, cIdx, row, col) => {
-    // Eğer o hücre zaten bilindiyse tıklanmasın
-    if (cellAnswers[`${rIdx}-${cIdx}`]) return;
+    // Eğer o hücre zaten bilindiyse veya pes edildiyse tıklanmasın
+    if (cellAnswers[`${rIdx}-${cIdx}`] || isSurrendered) return;
     
     setActiveCell({ rIdx, cIdx, rowId: row.id, colId: col.id });
     setSearchVisible(true);
@@ -78,6 +80,35 @@ export default function TicTacToeScreen({ route }) {
       }
     } catch (err) {
       Alert.alert("Hata", "Tahmin gönderilirken bir sorun oluştu.");
+    }
+  };
+
+  const surrenderGame = async () => {
+    try {
+      const payload = {
+        grid_type: grid.type,
+        row_ids: grid.rows.map(r => r.id),
+        col_ids: grid.cols.map(c => c.id)
+      };
+      const res = await api.post('/game/tictactoe/surrender', payload);
+      const answers = res.data.answers;
+      
+      const newAnswers = {...cellAnswers};
+      for (let rIdx=0; rIdx<3; rIdx++) {
+        for (let cIdx=0; cIdx<3; cIdx++) {
+          const key = `${rIdx}-${cIdx}`;
+          if (!newAnswers[key]) {
+            const rowId = grid.rows[rIdx].id;
+            const colId = grid.cols[cIdx].id;
+            const ansName = answers[`${rowId}-${colId}`] || "?";
+            newAnswers[key] = { id: -1, name: ansName, isSurrender: true };
+          }
+        }
+      }
+      setCellAnswers(newAnswers);
+      setIsSurrendered(true);
+    } catch (err) {
+      Alert.alert("Hata", "Pes etme işlemi başarısız oldu.");
     }
   };
 
@@ -141,8 +172,12 @@ export default function TicTacToeScreen({ route }) {
                 >
                   {answer ? (
                     <View style={{alignItems: 'center'}}>
-                      <Text style={styles.playCellTextDone}>✓</Text>
-                      <Text style={{color: '#fff', fontSize: 10, textAlign: 'center', marginTop: 5}} numberOfLines={2}>{answer.name}</Text>
+                      {answer.isSurrender ? (
+                        <Text style={[styles.playCellTextDone, {color: '#e74c3c'}]}>?</Text>
+                      ) : (
+                        <Text style={styles.playCellTextDone}>✓</Text>
+                      )}
+                      <Text style={{color: answer.isSurrender ? '#e74c3c' : '#fff', fontSize: 10, textAlign: 'center', marginTop: 5}} numberOfLines={2}>{answer.name}</Text>
                     </View>
                   ) : (
                     <Text style={styles.playCellText}>+</Text>
@@ -154,11 +189,18 @@ export default function TicTacToeScreen({ route }) {
         ))}
       </View>
 
-      <TouchableOpacity style={styles.newGameBtn} onPress={fetchNewGrid}>
-        <Text style={styles.newGameBtnText}>Yenile</Text>
-      </TouchableOpacity>
+      <View style={{flexDirection: 'row', justifyContent: 'center', gap: 10, marginTop: 20}}>
+        {(!isSurrendered && Object.keys(cellAnswers).length < 9) && (
+          <TouchableOpacity style={[styles.newGameBtn, {backgroundColor: '#e74c3c'}]} onPress={surrenderGame}>
+            <Text style={styles.newGameBtnText}>Pes Et</Text>
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity style={styles.newGameBtn} onPress={fetchNewGrid}>
+          <Text style={styles.newGameBtnText}>Yenile</Text>
+        </TouchableOpacity>
+      </View>
 
-      <SearchModal 
+      <SearchModal  
         visible={searchVisible} 
         onClose={() => setSearchVisible(false)}
         onSelect={handleGuessSubmit}
@@ -238,9 +280,9 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   newGameBtn: {
-    margin: 30,
     backgroundColor: 'rgba(255,255,255,0.1)',
-    padding: 15,
+    paddingVertical: 15,
+    paddingHorizontal: 25,
     borderRadius: SIZES.radius,
     alignItems: 'center',
   },
