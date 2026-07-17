@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-scale-moderate';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { GLOBAL_STYLES, COLORS, SIZES } from '../../utils/styles';
 
 export default function TicTacToeResultScreen({ route, navigation }) {
