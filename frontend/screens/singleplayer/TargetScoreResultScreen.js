@@ -17,19 +17,19 @@ export default function TargetScoreResultScreen({ route, navigation }) {
     }[puzzle.metric] || puzzle.metric;
 
     // Renk hesaplama mantığı
-    let distanceColor = COLORS.danger; // Default red (> 10%)
+    let distanceColor = COLORS.danger; // Default red
     let distanceText = "Maalesef Hedefin Uzağında Kaldın!";
 
-    if (result.distance === 0) {
+    if (result.tier === 0) {
         distanceColor = COLORS.primary; // Neon Green
         distanceText = "MÜKEMMEL! TAM İSABET! 🎯";
-    } else if (result.distance <= puzzle.target * 0.02) {
+    } else if (result.tier === 1) {
         distanceColor = COLORS.primary; // Neon Green
         distanceText = "HARİKA! ÇOK YAKLAŞTIN! 🎯";
-    } else if (result.distance <= puzzle.target * 0.15) {
+    } else if (result.tier === 2) {
         distanceColor = COLORS.secondary; // Neon Yellow/Orange
         distanceText = "İYİ TAHMİN! 📏";
-    } else if (result.distance <= puzzle.target * 0.30) {
+    } else if (result.tier === 3) {
         distanceColor = COLORS.secondary; // Neon Yellow/Orange
         distanceText = "FENA DEĞİL! 📏";
     }

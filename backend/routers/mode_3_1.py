@@ -180,12 +180,19 @@ def validate_submission(payload: dict, db: Session = Depends(get_db), current_us
     deviation_percent = (distance / max(1, target)) * 100
     
     xp_gained = 5
-    if deviation_percent <= 2.0:
+    tier = 4
+    if distance == 0:
         xp_gained = 25
+        tier = 0
+    elif deviation_percent <= 5.0:
+        xp_gained = 25
+        tier = 1
     elif deviation_percent <= 15.0:
         xp_gained = 15
-    elif deviation_percent <= 30.0:
+        tier = 2
+    elif deviation_percent <= 25.0:
         xp_gained = 10
+        tier = 3
         
     current_user.xp += xp_gained
     leveled_up = False
@@ -209,5 +216,6 @@ def validate_submission(payload: dict, db: Session = Depends(get_db), current_us
         "new_xp": current_user.xp,
         "new_level": current_user.level,
         "required_xp": required_xp,
-        "leveled_up": leveled_up
+        "leveled_up": leveled_up,
+        "tier": tier
     }
