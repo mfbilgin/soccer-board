@@ -22,12 +22,17 @@ jobs:
           # Eğer SSH Key kullanıyorsan password yerine bunu aktif edebilirsin:
           # key: ${{ secrets.VPS_SSH_KEY }}
           script: |
+            set -e
             cd ~/soccer-board
             echo "Pulling latest changes from main branch..."
             git pull origin main
             
             echo "Rebuilding and restarting backend container..."
             cd backend
-            docker-compose up -d --build backend
+            if command -v docker-compose &> /dev/null; then
+              sudo docker-compose up -d --build backend
+            else
+              sudo docker compose up -d --build backend
+            fi
             
             echo "Deployment successful!"
