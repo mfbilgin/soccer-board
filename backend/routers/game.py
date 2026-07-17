@@ -5,6 +5,7 @@ import random
 
 import schemas
 from database import get_db
+from routers.auth import get_current_user
 from tictactoe import TicTacToeEngine
 from rapidfuzz import process, fuzz
 
@@ -104,12 +105,20 @@ class SurrenderRequest(BaseModel):
     grid_type: int
     row_ids: List[int]
     col_ids: List[int]
+    correct_count: int = 0
 
 @router.post("/surrender")
-def surrender_game(req: SurrenderRequest, db: Session = Depends(get_db)):
+def surrender_game(req: SurrenderRequest, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
     engine = TicTacToeEngine(db)
     answers = engine.get_answers(req.grid_type, req.row_ids, req.col_ids)
-    return {"answers": answers}
+    
+    xp_gained = req.correct_count * 10
+    if xp_gained > 0 and current_user:
+        current_user.xp += xp_gained
+        db.commit()
+        db.refresh(current_user)
+        
+    return {"answers": answers, "xp_gained": xp_gained}
 
 @router.get("/search", response_model=schemas.SearchResponse)
 def search_entity(
