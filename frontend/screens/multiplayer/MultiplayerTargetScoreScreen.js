@@ -37,7 +37,7 @@ export default function MultiplayerTargetScoreScreen({ route, navigation }) {
                 await SocketService.connect();
                 SocketService.on('match_found', handleMatchFound);
                 SocketService.on('game_update', handleGameUpdate);
-                SocketService.on('game_result', handleGameResult);
+                SocketService.on('game_over', handleGameResult);
                 SocketService.on('player_disconnected', () => setOpponentDisconnected(true));
                 SocketService.on('player_reconnected', () => setOpponentDisconnected(false));
                 SocketService.on('error', handleError);
@@ -55,7 +55,7 @@ export default function MultiplayerTargetScoreScreen({ route, navigation }) {
         return () => {
             SocketService.off('match_found', handleMatchFound);
             SocketService.off('game_update', handleGameUpdate);
-            SocketService.off('game_result', handleGameResult);
+            SocketService.off('game_over', handleGameResult);
             SocketService.off('player_disconnected');
             SocketService.off('player_reconnected');
             SocketService.off('error', handleError);
@@ -193,6 +193,13 @@ export default function MultiplayerTargetScoreScreen({ route, navigation }) {
         }
     };
 
+    const clearSlot = (index) => {
+        if (submitted) return;
+        const newPlayers = [...selectedPlayers];
+        newPlayers[index] = null;
+        setSelectedPlayers(newPlayers);
+    };
+
     const submitGuess = () => {
         setSearchVisible(false);
         setSubmitted(true);
@@ -240,30 +247,44 @@ export default function MultiplayerTargetScoreScreen({ route, navigation }) {
 
                 <View style={styles.slotsContainer}>
                     {selectedPlayers.map((player, index) => (
-                        <TouchableOpacity 
-                            key={index} 
-                            style={[
-                                styles.playerSlotBase, 
-                                player ? styles.slotFilled : {},
-                                isSmall ? styles.playerSlotSmall : styles.playerSlotBig
-                            ]}
-                            onPress={() => openSearch(index)}
-                            disabled={player !== null || submitted}
-                        >
-                            {player ? (
-                                <View style={isSmall ? styles.playerContentRow : styles.playerContentCol}>
-                                    <Image 
-                                        source={{ uri: player.image_url || 'https://cdn-icons-png.flaticon.com/512/847/847969.png' }} 
-                                        style={isSmall ? styles.playerImageSmall : styles.playerImageBig} 
-                                    />
-                                    <Text style={[styles.playerName, isSmall ? {flex: 1, textAlign: 'left'} : {textAlign: 'center'}]}>
-                                        {player.name}
-                                    </Text>
-                                </View>
-                            ) : (
-                                <Text style={styles.slotPlaceholder}>Futbolcu Seç +</Text>
+                        <View key={index} style={{ position: 'relative' }}>
+                            <TouchableOpacity 
+                                style={[
+                                    styles.playerSlotBase, 
+                                    player ? styles.slotFilled : {},
+                                    isSmall ? styles.playerSlotSmall : styles.playerSlotBig
+                                ]}
+                                onPress={() => openSearch(index)}
+                                disabled={player !== null || submitted}
+                            >
+                                {player ? (
+                                    <View style={isSmall ? styles.playerContentRow : styles.playerContentCol}>
+                                        <Image 
+                                            source={{ uri: player.image_url || 'https://cdn-icons-png.flaticon.com/512/847/847969.png' }} 
+                                            style={isSmall ? styles.playerImageSmall : styles.playerImageBig} 
+                                        />
+                                        <Text style={[styles.playerName, isSmall ? {flex: 1, textAlign: 'left'} : {textAlign: 'center'}]}>
+                                            {player.name}
+                                        </Text>
+                                    </View>
+                                ) : (
+                                    <Text style={styles.slotPlaceholder}>Futbolcu Seç +</Text>
+                                )}
+                            </TouchableOpacity>
+                            {player !== null && !submitted && (
+                                <TouchableOpacity 
+                                    style={{
+                                        position: 'absolute', top: -10, right: -10,
+                                        backgroundColor: '#e74c3c', width: 34, height: 34,
+                                        borderRadius: 17, justifyContent: 'center', alignItems: 'center',
+                                        borderWidth: 2, borderColor: '#FFF', zIndex: 10
+                                    }}
+                                    onPress={() => clearSlot(index)}
+                                >
+                                    <Text style={{color: '#FFF', fontWeight: 'bold', fontSize: 16}}>X</Text>
+                                </TouchableOpacity>
                             )}
-                        </TouchableOpacity>
+                        </View>
                     ))}
                 </View>
 
@@ -322,12 +343,12 @@ export default function MultiplayerTargetScoreScreen({ route, navigation }) {
         const isDraw = resultData.winner_id === null;
         
         return (
-            <View style={[styles.center, {flex: 1}]}>
+            <ScrollView contentContainerStyle={{padding: 20, alignItems: 'center', paddingBottom: 60}} showsVerticalScrollIndicator={false}>
                 <Text style={{color: '#FFF', fontFamily: FONTS.headingBlack, fontSize: 40, marginBottom: 20, textAlign: 'center'}}>
                     {isDraw ? 'BERABERE 🤝' : isWinner ? 'KAZANDIN! 🎉' : 'KAYBETTİN 😔'}
                 </Text>
                 
-                <View style={{backgroundColor: '#0e3609', width: '90%', borderRadius: 24, padding: 25, borderWidth: 4, borderColor: '#4a840a', borderBottomWidth: 8, alignItems: 'center'}}>
+                <View style={{backgroundColor: '#0e3609', width: '100%', borderRadius: 24, padding: 25, borderWidth: 4, borderColor: '#4a840a', borderBottomWidth: 8, alignItems: 'center', marginBottom: 20}}>
                     <Text style={{color: '#95c029', fontFamily: FONTS.headingBlack, fontSize: 18, marginBottom: 15, textTransform: 'uppercase', letterSpacing: 1}}>Maç Sonucu</Text>
                     
                     {Object.keys(resultData.results).map(uid => {
@@ -349,10 +370,30 @@ export default function MultiplayerTargetScoreScreen({ route, navigation }) {
                     })}
                 </View>
 
-                <TouchableOpacity style={[styles.actionBtn, styles.actionBtnPrimary, {width: '90%', marginTop: 30}]} onPress={() => navigation.navigate('MainTabs')}>
+                {Object.keys(resultData.results).map(uid => {
+                    const r = resultData.results[uid];
+                    const isMe = uid === String(user?.id);
+                    if (!r.details || r.details.length === 0) return null;
+
+                    return (
+                        <View key={`details-${uid}`} style={{backgroundColor: isMe ? '#4a840a' : 'rgba(255,255,255,0.05)', width: '100%', borderRadius: 20, padding: 20, marginBottom: 15, borderWidth: isMe ? 2 : 1, borderColor: isMe ? '#95c029' : 'rgba(255,255,255,0.1)'}}>
+                            <Text style={{color: isMe ? '#fcc205' : '#FFF', fontFamily: FONTS.headingBlack, fontSize: 18, marginBottom: 10}}>
+                                {isMe ? 'Senin Kadron' : 'Rakibin Kadrosu'}
+                            </Text>
+                            {r.details.map((player, idx) => (
+                                <View key={idx} style={{flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)'}}>
+                                    <Text style={{color: '#FFF', fontFamily: FONTS.body, fontSize: 16, flex: 1}} numberOfLines={1}>{player.name}</Text>
+                                    <Text style={{color: '#95c029', fontFamily: FONTS.mono, fontSize: 16, fontWeight: 'bold'}}>{player.value}</Text>
+                                </View>
+                            ))}
+                        </View>
+                    );
+                })}
+
+                <TouchableOpacity style={[styles.actionBtn, styles.actionBtnPrimary, {width: '100%', marginTop: 20}]} onPress={() => navigation.navigate('MainTabs')}>
                     <Text style={styles.actionBtnTextPrimary}>LOBİYE DÖN</Text>
                 </TouchableOpacity>
-            </View>
+            </ScrollView>
         );
     };
 
@@ -409,7 +450,7 @@ export default function MultiplayerTargetScoreScreen({ route, navigation }) {
                     </View>
                     <Text style={styles.logoText}>Futbol Tahmin</Text>
                     <View style={styles.currencyCol}>
-                        <Text style={styles.currencyGem}>💎 1,250</Text>
+                        <Text style={styles.currencyGem}>💎 {user?.gems || 0}</Text>
                         <Text style={styles.currencyChip}>💰 {user?.chips >= 1000 ? (user.chips/1000)+'K' : (user?.chips || 0)}</Text>
                     </View>
                 </View>

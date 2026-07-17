@@ -26,6 +26,8 @@ import TargetScoreResultScreen from './screens/singleplayer/TargetScoreResultScr
 import CustomTabBar from './components/CustomTabBar';
 import { COLORS, FONTS } from './theme';
 
+import UpdateOverlay from './components/UpdateOverlay';
+
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
@@ -107,6 +109,7 @@ export default function App() {
         <Stack.Screen name="TargetScoreResult" component={TargetScoreResultScreen} options={{ title: 'Sonuç', headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
+    <UpdateOverlay />
     </ImageBackground>
     </SafeAreaProvider>
   );

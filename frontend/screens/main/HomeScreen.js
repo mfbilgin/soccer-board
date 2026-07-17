@@ -226,7 +226,7 @@ export default function HomeScreen({ navigation }) {
                                     <View style={styles.currencyIconBg}>
                                         <Text style={styles.currencyEmoji}>💎</Text>
                                     </View>
-                                    <Text style={styles.currencyText}>{formatNumber(133)}</Text>
+                                    <Text style={styles.currencyText}>{formatNumber(user?.gems || 0)}</Text>
                                 </View>
                             </TouchableOpacity>
                         </View>

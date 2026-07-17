@@ -70,6 +70,12 @@ export default function TargetScoreScreen({ navigation }) {
         }
     };
 
+    const clearSlot = (index) => {
+        const newPlayers = [...selectedPlayers];
+        newPlayers[index] = null;
+        setSelectedPlayers(newPlayers);
+    };
+
     const submitGuess = async () => {
         if (selectedPlayers.some(p => p === null)) {
             Alert.alert("Hata", "Tüm kutuları doldurmalısın!");
@@ -136,30 +142,44 @@ export default function TargetScoreScreen({ navigation }) {
 
             <View style={styles.slotsContainer}>
                 {selectedPlayers.map((player, index) => (
-                    <TouchableOpacity 
-                        key={index} 
-                        style={[
-                            styles.playerSlotBase, 
-                            player ? styles.slotFilled : {},
-                            isSmall ? styles.playerSlotSmall : styles.playerSlotBig
-                        ]}
-                        onPress={() => openSearch(index)}
-                        disabled={player !== null}
-                    >
-                        {player ? (
-                            <View style={isSmall ? styles.playerContentRow : styles.playerContentCol}>
-                                <Image 
-                                    source={{ uri: player.image_url || 'https://cdn-icons-png.flaticon.com/512/847/847969.png' }} 
-                                    style={isSmall ? styles.playerImageSmall : styles.playerImageBig} 
-                                />
-                                <Text style={[styles.playerName, isSmall ? {flex: 1, textAlign: 'left'} : {textAlign: 'center'}]}>
-                                    {player.name}
-                                </Text>
-                            </View>
-                        ) : (
-                            <Text style={styles.slotPlaceholder}>Futbolcu Seç +</Text>
+                    <View key={index} style={{ position: 'relative' }}>
+                        <TouchableOpacity 
+                            style={[
+                                styles.playerSlotBase, 
+                                player ? styles.slotFilled : {},
+                                isSmall ? styles.playerSlotSmall : styles.playerSlotBig
+                            ]}
+                            onPress={() => openSearch(index)}
+                            disabled={player !== null}
+                        >
+                            {player ? (
+                                <View style={isSmall ? styles.playerContentRow : styles.playerContentCol}>
+                                    <Image 
+                                        source={{ uri: player.image_url || 'https://cdn-icons-png.flaticon.com/512/847/847969.png' }} 
+                                        style={isSmall ? styles.playerImageSmall : styles.playerImageBig} 
+                                    />
+                                    <Text style={[styles.playerName, isSmall ? {flex: 1, textAlign: 'left'} : {textAlign: 'center'}]}>
+                                        {player.name}
+                                    </Text>
+                                </View>
+                            ) : (
+                                <Text style={styles.slotPlaceholder}>Futbolcu Seç +</Text>
+                            )}
+                        </TouchableOpacity>
+                        {player !== null && (
+                            <TouchableOpacity 
+                                style={{
+                                    position: 'absolute', top: -10, right: -10,
+                                    backgroundColor: '#e74c3c', width: 34, height: 34,
+                                    borderRadius: 17, justifyContent: 'center', alignItems: 'center',
+                                    borderWidth: 2, borderColor: '#FFF', zIndex: 10
+                                }}
+                                onPress={() => clearSlot(index)}
+                            >
+                                <Text style={{color: '#FFF', fontWeight: 'bold', fontSize: 16}}>X</Text>
+                            </TouchableOpacity>
                         )}
-                    </TouchableOpacity>
+                    </View>
                 ))}
             </View>
 
@@ -285,6 +305,6 @@ const styles = StyleSheet.create({
         color: '#FFF',
         fontFamily: FONTS.headingBlack,
         fontSize: 20,
-        flex: 1
+        marginBottom: 5
     }
 });

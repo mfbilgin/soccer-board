@@ -11,17 +11,18 @@ from routers.auth import get_current_user
 
 router = APIRouter(prefix="/api/mode31", tags=["Mode 3.1: Kariyer İstatistiği Avı"])
 
-CLUB_METRICS = ["goals", "assists", "appearances", "yellow_cards", "red_cards", "minutes_played"]
+CLUB_METRICS = ["goals", "assists", "appearances", "yellow_cards", "red_cards"]
 INT_METRICS = ["goals", "assists", "caps"]
 
 POPULAR_LEAGUES = {
     "GB1": "Premier League (İngiltere)",
     "ES1": "La Liga (İspanya)",
     "IT1": "Serie A (İtalya)",
-    "L1": "Bundesliga (Almanya)",
-    "FR1": "Ligue 1 (Fransa)",
-    "TR1": "Trendyol Süper Lig",
-    "INT": "Milli Maçlar"
+    "NL1": "Eredivisie",
+    "PO1": "Liga Portugal",
+    "TR1": "Süper Lig",
+    "INT": "Milli Takımlar",
+    "ALL": "Tüm Ligler"
 }
 
 def round_target(val: int, metric: str) -> int:
@@ -61,16 +62,19 @@ def generate_puzzle(db: Session = Depends(get_db)):
         metric = random.choice(CLUB_METRICS)
         metric_column = getattr(models.PlayerClubStat, metric)
         
-        comp = db.query(models.Competition).filter(models.Competition.name == league_code).first()
-        if not comp:
-            raise HTTPException(status_code=500, detail="League not found in DB")
-            
         pool_size = random.choice([50, 200, 1000, 5000])
-        top_players_query = db.query(
+        query = db.query(
             models.PlayerClubStat.player_id,
             func.sum(metric_column).label("total_stat")
-        ).filter(models.PlayerClubStat.competition_id == comp.id) \
-         .group_by(models.PlayerClubStat.player_id) \
+        )
+        
+        if league_code != "ALL":
+            comp = db.query(models.Competition).filter(models.Competition.name == league_code).first()
+            if not comp:
+                raise HTTPException(status_code=500, detail="League not found in DB")
+            query = query.filter(models.PlayerClubStat.competition_id == comp.id)
+            
+        top_players_query = query.group_by(models.PlayerClubStat.player_id) \
          .having(func.sum(metric_column) > 0) \
          .order_by(func.sum(metric_column).desc()) \
          .limit(pool_size).all()
@@ -130,21 +134,27 @@ def validate_single(payload: dict, db: Session = Depends(get_db)):
     else:
         if metric not in CLUB_METRICS:
             return {"valid": False, "message": f"Kulüp için {metric} geçersiz."}
-        comp = db.query(models.Competition).filter(models.Competition.name == league).first()
-        if not comp:
-            return {"valid": False, "message": "Lig bulunamadı."}
             
-        apps_total = db.query(func.sum(models.PlayerClubStat.appearances)).filter(
-            models.PlayerClubStat.player_id == player_id,
-            models.PlayerClubStat.competition_id == comp.id
-        ).scalar() or 0
+        apps_query = db.query(func.sum(models.PlayerClubStat.appearances)).filter(
+            models.PlayerClubStat.player_id == player_id
+        )
+        
+        if league != "ALL":
+            comp = db.query(models.Competition).filter(models.Competition.name == league).first()
+            if not comp:
+                return {"valid": False, "message": "Lig bulunamadı."}
+            apps_query = apps_query.filter(models.PlayerClubStat.competition_id == comp.id)
+            
+        apps_total = apps_query.scalar() or 0
         
         if apps_total > 0:
             col = getattr(models.PlayerClubStat, metric)
-            total = db.query(func.sum(col)).filter(
-                models.PlayerClubStat.player_id == player_id,
-                models.PlayerClubStat.competition_id == comp.id
-            ).scalar() or 0
+            total_query = db.query(func.sum(col)).filter(
+                models.PlayerClubStat.player_id == player_id
+            )
+            if league != "ALL":
+                total_query = total_query.filter(models.PlayerClubStat.competition_id == comp.id)
+            total = total_query.scalar() or 0
             return {"valid": True, "value": total}
         else:
             return {"valid": False, "message": "Bu oyuncu bu ligde oynamamış."}
@@ -169,12 +179,14 @@ def validate_submission(payload: dict, db: Session = Depends(get_db), current_us
             col = getattr(models.PlayerNationalStat, metric)
             val = db.query(func.sum(col)).filter(models.PlayerNationalStat.player_id == pid).scalar()
         else:
-            comp = db.query(models.Competition).filter(models.Competition.name == league).first()
             col = getattr(models.PlayerClubStat, metric)
-            val = db.query(func.sum(col)).filter(
-                models.PlayerClubStat.player_id == pid,
-                models.PlayerClubStat.competition_id == comp.id if comp else -1
-            ).scalar()
+            query = db.query(func.sum(col)).filter(
+                models.PlayerClubStat.player_id == pid
+            )
+            if league != "ALL":
+                comp = db.query(models.Competition).filter(models.Competition.name == league).first()
+                query = query.filter(models.PlayerClubStat.competition_id == comp.id if comp else -1)
+            val = query.scalar()
             
         val = val or 0
         total_sum += val

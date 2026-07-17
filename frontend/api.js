@@ -7,7 +7,7 @@ import * as SecureStore from 'expo-secure-store';
 
 // --- CANLI ORTAM (PRODUCTION) AYARI ---
 // APK Derlemeden (Build) önce aşağıdaki satırı aktif et ve kendi Droplet IP'ni yaz!
-export const DROPLET_IP = "165.22.x.x"; // <-- Burayı değiştir
+export const DROPLET_IP = "209.38.237.30"; // <-- Burayı değiştir
 export const API_URL = `http://${DROPLET_IP}:8000/api`;
 
 
