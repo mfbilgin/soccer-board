@@ -36,7 +36,7 @@ def round_target(val: int, metric: str) -> int:
         return max(10, int(math.ceil(val / 10.0)) * 10)
 
 @router.get("/generate")
-def generate_puzzle(db: Session = Depends(get_db)):
+def generate_puzzle():
     league_code = random.choice(list(POPULAR_LEAGUES.keys()))
     league_name = POPULAR_LEAGUES[league_code]
     
@@ -44,53 +44,26 @@ def generate_puzzle(db: Session = Depends(get_db)):
     
     if league_code == "INT":
         metric = random.choice(INT_METRICS)
-        metric_column = getattr(models.PlayerNationalStat, metric)
-        
-        pool_size = random.choice([50, 200, 1000, 5000])
-        top_players_query = db.query(
-            models.PlayerNationalStat.player_id,
-            func.sum(metric_column).label("total_stat")
-        ).group_by(models.PlayerNationalStat.player_id) \
-         .having(func.sum(metric_column) > 0) \
-         .order_by(func.sum(metric_column).desc()) \
-         .limit(pool_size).all()
-         
-        if len(top_players_query) > 50:
-            top_players_query = random.sample(top_players_query, 50)
-         
     else:
         metric = random.choice(CLUB_METRICS)
-        metric_column = getattr(models.PlayerClubStat, metric)
         
-        pool_size = random.choice([50, 200, 1000, 5000])
-        query = db.query(
-            models.PlayerClubStat.player_id,
-            func.sum(metric_column).label("total_stat")
-        )
-        
-        if league_code != "ALL":
-            comp = db.query(models.Competition).filter(models.Competition.name == league_code).first()
-            if not comp:
-                raise HTTPException(status_code=500, detail="League not found in DB")
-            query = query.filter(models.PlayerClubStat.competition_id == comp.id)
-            
-        top_players_query = query.group_by(models.PlayerClubStat.player_id) \
-         .having(func.sum(metric_column) > 0) \
-         .order_by(func.sum(metric_column).desc()) \
-         .limit(pool_size).all()
-         
-        if len(top_players_query) > 50:
-            top_players_query = random.sample(top_players_query, 50)
-
-    valid_players = [{"id": p[0], "stat": p[1]} for p in top_players_query]
+    # Her oyuncu için ortalama ve maksimum havuzlar
+    # (Ortalama bir iyi oyuncunun kariyer rakamları)
+    METRIC_RANGES = {
+        "goals": (30, 150),
+        "assists": (20, 80),
+        "appearances": (100, 300),
+        "yellow_cards": (20, 70),
+        "red_cards": (1, 5),
+        "caps": (30, 90)
+    }
     
-    if len(valid_players) < player_count:
-        target_value = random.randint(50, 300)
-        target_value = round_target(target_value, metric)
-    else:
-        chosen = random.sample(valid_players, player_count)
-        raw_sum = sum(p["stat"] for p in chosen)
-        target_value = round_target(raw_sum, metric)
+    min_val, max_val = METRIC_RANGES.get(metric, (20, 100))
+    
+    # Hedef sayıyı oyuncu sayısına göre hesapla
+    # Her oyuncu için min_val ile max_val arasında bir sayı tutup topluyoruz
+    raw_sum = sum(random.randint(min_val, max_val) for _ in range(player_count))
+    target_value = round_target(raw_sum, metric)
         
     puzzle_id = str(uuid.uuid4())
     
