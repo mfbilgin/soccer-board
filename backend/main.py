@@ -7,8 +7,9 @@ from sqlalchemy import or_
 
 import models
 import schemas
-from database import get_db, engine
+from database import get_db, engine, SessionLocal
 from routers import auth, game, pyramid, social, multiplayer, target_score, career_guess
+import tictactoe
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -33,6 +34,18 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.on_event("startup")
+def startup_event():
+    print("Pre-initializing TicTacToe Cache...")
+    db = SessionLocal()
+    try:
+        tictactoe.TicTacToeEngine(db)
+        print("TicTacToe Cache globally ready!")
+    except Exception as e:
+        print(f"Error initializing cache: {e}")
+    finally:
+        db.close()
 
 @app.get("/")
 def read_root():
