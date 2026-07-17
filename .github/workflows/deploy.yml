@@ -28,6 +28,6 @@ jobs:
             
             echo "Rebuilding and restarting backend container..."
             cd backend
-            docker-compose up -d --build football_trivia_backend
+            docker-compose up -d --build backend
             
             echo "Deployment successful!"
