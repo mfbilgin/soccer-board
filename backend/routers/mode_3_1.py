@@ -180,9 +180,11 @@ def validate_submission(payload: dict, db: Session = Depends(get_db), current_us
     deviation_percent = (distance / max(1, target)) * 100
     
     xp_gained = 5
-    if deviation_percent <= 1.0:
+    if deviation_percent <= 2.0:
         xp_gained = 25
-    elif deviation_percent <= 10.0:
+    elif deviation_percent <= 15.0:
+        xp_gained = 15
+    elif deviation_percent <= 30.0:
         xp_gained = 10
         
     current_user.xp += xp_gained

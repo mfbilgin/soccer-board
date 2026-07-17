@@ -23,9 +23,15 @@ export default function TargetScoreResultScreen({ route, navigation }) {
     if (result.distance === 0) {
         distanceColor = COLORS.primary; // Neon Green
         distanceText = "MÜKEMMEL! TAM İSABET! 🎯";
-    } else if (result.distance <= puzzle.target * 0.1) {
+    } else if (result.distance <= puzzle.target * 0.02) {
+        distanceColor = COLORS.primary; // Neon Green
+        distanceText = "HARİKA! ÇOK YAKLAŞTIN! 🎯";
+    } else if (result.distance <= puzzle.target * 0.15) {
         distanceColor = COLORS.secondary; // Neon Yellow/Orange
-        distanceText = "ÇOK YAKLAŞTIN! 📏";
+        distanceText = "İYİ TAHMİN! 📏";
+    } else if (result.distance <= puzzle.target * 0.30) {
+        distanceColor = COLORS.secondary; // Neon Yellow/Orange
+        distanceText = "FENA DEĞİL! 📏";
     }
 
     // XP Bar Percentage
