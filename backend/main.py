@@ -1,3 +1,5 @@
+# Football Trivia API Main Entry Point
+
 from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
