@@ -129,7 +129,7 @@ export default function TargetScoreScreen({ navigation }) {
             imageStyle={{ opacity: 0.15 }}
             resizeMode="cover"
         >
-        <ScrollView contentContainerStyle={{paddingBottom: 40}}>
+        <View style={{flex: 1, paddingBottom: 40}}>
             <View style={styles.targetCard}>
                 <Text style={styles.targetLeague}>{puzzle.league_name || puzzle.league}</Text>
                 <Text style={styles.targetMain}>
@@ -208,7 +208,7 @@ export default function TargetScoreScreen({ navigation }) {
                 onSelect={handlePlayerSelect}
                 searchType={1}
             />
-        </ScrollView>
+        </View>
         </ImageBackground>
     );
 }

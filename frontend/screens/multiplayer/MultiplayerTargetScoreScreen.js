@@ -230,7 +230,7 @@ export default function MultiplayerTargetScoreScreen({ route, navigation }) {
                 imageStyle={{ opacity: 0.15 }}
                 resizeMode="cover"
             >
-            <ScrollView contentContainerStyle={{paddingBottom: 40}}>
+            <View style={{flex: 1, paddingBottom: 40}}>
                 <View style={{flexDirection: 'row', justifyContent: 'center', marginVertical: 10}}>
                     <Text style={{color: COLORS.secondary, fontSize: 24, fontWeight: 'bold'}}>⏱️ {timeLeft}s</Text>
                 </View>
@@ -320,7 +320,7 @@ export default function MultiplayerTargetScoreScreen({ route, navigation }) {
                         onSelect={handlePlayerSelect}
                         searchType={1}
                     />
-                </ScrollView>
+                </View>
                 
                 {opponentDisconnected && (
                     <View style={[StyleSheet.absoluteFill, {backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center', zIndex: 999}]}>
