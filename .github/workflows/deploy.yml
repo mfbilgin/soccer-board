@@ -1,0 +1,32 @@
+name: Deploy Backend to VPS
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+      - 'docker-compose.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: SSH and Deploy
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          # Eğer SSH Key kullanıyorsan password yerine bunu aktif edebilirsin:
+          # key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd ~/soccer-board
+            echo "Pulling latest changes from main branch..."
+            git pull origin main
+            
+            echo "Rebuilding and restarting backend container..."
+            docker-compose up -d --build football_trivia_backend
+            
+            echo "Deployment successful!"
