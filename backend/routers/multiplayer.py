@@ -72,6 +72,161 @@ async def initialize_game_state(room_id: str):
             await room.broadcast({"type": "game_update", "action": "puzzle_ready", "puzzle": puzzle})
         finally:
             db.close()
+            
+    elif room.game_mode in ["tictactoe_1", "tictactoe_2"]:
+        db = SessionLocal()
+        try:
+            from tictactoe import TicTacToeEngine
+            import random
+            engine = TicTacToeEngine(db)
+            grid_type = 1 if room.game_mode == "tictactoe_1" else 2
+            
+            if grid_type == 1:
+                grid = engine.generate_type1_grid()
+            else:
+                grid = engine.generate_type2_grid()
+                
+            p1, p2 = list(room.players.keys())
+            if random.random() > 0.5:
+                p1, p2 = p2, p1
+                
+            room.game_state = {
+                "grid": grid,
+                "board": {},
+                "active_player": p1,
+                "player_symbols": {p1: "X", p2: "O"},
+                "consecutive_passes": 0,
+                "turn_end_time": time.time() + 30,
+                "timer_task": asyncio.create_task(tictactoe_timer(room_id))
+            }
+            
+            await room.broadcast({
+                "type": "game_update",
+                "action": "tictactoe_ready",
+                "grid": grid,
+                "active_player": p1,
+                "player_symbols": room.game_state["player_symbols"],
+                "turn_end_time": room.game_state["turn_end_time"]
+            })
+        finally:
+            db.close()
+
+async def tictactoe_timer(room_id: str):
+    try:
+        while True:
+            room = manager.rooms.get(room_id)
+            if not room or room.state != "playing":
+                return
+            
+            if len(room.disconnect_tasks) > 0:
+                await asyncio.sleep(1)
+                continue
+                
+            turn_end = room.game_state.get("turn_end_time", 0)
+            if time.time() >= turn_end:
+                log_match_event(room_id, "SYSTEM", "Turn time up! Automatic pass.")
+                await tictactoe_pass(room_id, room.game_state["active_player"], auto=True)
+                
+            await asyncio.sleep(1)
+    except asyncio.CancelledError:
+        pass
+
+async def tictactoe_pass(room_id: str, user_id: str, auto=False):
+    room = manager.rooms.get(room_id)
+    if not room or room.state != "playing": return
+    
+    if room.game_state.get("active_player") != user_id:
+        return
+        
+    log_match_event(room_id, user_id, "Passed turn (auto=True)" if auto else "Passed turn manually")
+    room.game_state["consecutive_passes"] += 1
+    
+    if room.game_state["consecutive_passes"] >= 2:
+        log_match_event(room_id, "SYSTEM", "Deadlock reached. Evaluating winner.")
+        await evaluate_tictactoe_winner(room_id, reason="deadlock")
+        return
+        
+    p1, p2 = list(room.players.keys())
+    next_player = p2 if user_id == p1 else p1
+    
+    room.game_state["active_player"] = next_player
+    room.game_state["turn_end_time"] = time.time() + 30
+    
+    await room.broadcast({
+        "type": "game_update",
+        "action": "tictactoe_turn_switch",
+        "active_player": next_player,
+        "turn_end_time": room.game_state["turn_end_time"],
+        "consecutive_passes": room.game_state["consecutive_passes"],
+        "board": room.game_state.get("board", {})
+    })
+
+def check_tictactoe_win(board: dict, symbol: str) -> bool:
+    for r in range(3):
+        if all(board.get(f"{r}-{c}", {}).get("symbol") == symbol for c in range(3)): return True
+    for c in range(3):
+        if all(board.get(f"{r}-{c}", {}).get("symbol") == symbol for r in range(3)): return True
+    if all(board.get(f"{i}-{i}", {}).get("symbol") == symbol for i in range(3)): return True
+    if all(board.get(f"{i}-{2-i}", {}).get("symbol") == symbol for i in range(3)): return True
+    return False
+
+async def evaluate_tictactoe_winner(room_id: str, reason: str, explicit_winner: str = None):
+    room = manager.rooms.get(room_id)
+    if not room: return
+    
+    room.state = "finished"
+    if "timer_task" in room.game_state:
+        room.game_state["timer_task"].cancel()
+        
+    board = room.game_state.get("board", {})
+    p1, p2 = list(room.players.keys())
+    
+    winner_id = explicit_winner
+    if not winner_id:
+        p1_count = sum(1 for c in board.values() if c["owner"] == p1)
+        p2_count = sum(1 for c in board.values() if c["owner"] == p2)
+        if p1_count > p2_count: winner_id = p1
+        elif p2_count > p1_count: winner_id = p2
+        else: winner_id = None
+            
+    db = SessionLocal()
+    try:
+        if winner_id:
+            loser_id = p2 if winner_id == p1 else p1
+            award_winnings(db, int(winner_id), room.entry_fee * 2)
+            update_rating(db, int(winner_id), int(loser_id))
+        else:
+            user1 = db.query(models.User).filter(models.User.id == int(p1)).first()
+            user2 = db.query(models.User).filter(models.User.id == int(p2)).first()
+            if user1: user1.chips += room.entry_fee
+            if user2: user2.chips += room.entry_fee
+            db.commit()
+            
+        from tictactoe import TicTacToeEngine
+        engine = TicTacToeEngine(db)
+        grid = room.game_state["grid"]
+        row_ids = [r["id"] for r in grid["rows"]]
+        col_ids = [c["id"] for c in grid["cols"]]
+        answers = engine.get_answers(grid["type"], row_ids, col_ids)
+        
+        await room.broadcast({
+            "type": "game_over",
+            "reason": reason,
+            "winner_id": winner_id,
+            "board": board,
+            "answers": answers,
+            "results": {
+                p1: {"message": f"{sum(1 for c in board.values() if c['owner'] == p1)} Hücre"},
+                p2: {"message": f"{sum(1 for c in board.values() if c['owner'] == p2)} Hücre"}
+            }
+        })
+    finally:
+        db.close()
+        for pid in list(room.players.keys()):
+            if pid in manager.user_rooms:
+                del manager.user_rooms[pid]
+        if room_id in manager.rooms:
+            del manager.rooms[room_id]
 
 async def mode31_timer(room_id: str):
     try:
@@ -280,6 +435,68 @@ async def websocket_endpoint(websocket: WebSocket, token: str = Query(...)):
                                 del manager.user_rooms[pid]
                         if room_id in manager.rooms:
                             del manager.rooms[room_id]
+
+            elif action == "tictactoe_guess":
+                room_id = manager.user_rooms.get(user_id)
+                if room_id and room_id in manager.rooms:
+                    room = manager.rooms[room_id]
+                    if room.state == "playing" and room.game_mode.startswith("tictactoe"):
+                        if room.game_state.get("active_player") != user_id:
+                            continue # Ignore if not their turn
+                            
+                        r_idx = int(data.get("rIdx"))
+                        c_idx = int(data.get("cIdx"))
+                        entity_id = int(data.get("entity_id"))
+                        cell_key = f"{r_idx}-{c_idx}"
+                        
+                        if cell_key in room.game_state.get("board", {}):
+                            continue # Cell already taken
+                            
+                        grid = room.game_state["grid"]
+                        row_id = grid["rows"][r_idx]["id"]
+                        col_id = grid["cols"][c_idx]["id"]
+                        
+                        db = SessionLocal()
+                        valid = False
+                        try:
+                            from tictactoe import TicTacToeEngine
+                            engine = TicTacToeEngine(db)
+                            valid = engine.validate_answer(grid["type"], row_id, col_id, entity_id)
+                        finally:
+                            db.close()
+                            
+                        if valid:
+                            symbol = room.game_state["player_symbols"][user_id]
+                            room.game_state["board"][cell_key] = {"owner": user_id, "symbol": symbol}
+                            room.game_state["consecutive_passes"] = 0
+                            
+                            log_match_event(room_id, user_id, f"Correct guess at {r_idx},{c_idx}")
+                            
+                            # Check win
+                            if check_tictactoe_win(room.game_state["board"], symbol):
+                                log_match_event(room_id, "SYSTEM", f"Player {user_id} won by 3 in a row.")
+                                await evaluate_tictactoe_winner(room_id, reason="win", explicit_winner=user_id)
+                                continue
+                                
+                            # Check full board draw
+                            if len(room.game_state["board"]) == 9:
+                                log_match_event(room_id, "SYSTEM", "Board full. Evaluating winner.")
+                                await evaluate_tictactoe_winner(room_id, reason="full")
+                                continue
+                                
+                            # Next turn
+                            await tictactoe_pass(room_id, user_id, auto=False)
+                        else:
+                            # Wrong guess - pass turn
+                            log_match_event(room_id, user_id, f"Wrong guess at {r_idx},{c_idx}")
+                            await tictactoe_pass(room_id, user_id, auto=False)
+                            
+            elif action == "tictactoe_pass":
+                room_id = manager.user_rooms.get(user_id)
+                if room_id and room_id in manager.rooms:
+                    room = manager.rooms[room_id]
+                    if room.state == "playing" and room.game_mode.startswith("tictactoe"):
+                        await tictactoe_pass(room_id, user_id, auto=False)
 
     except WebSocketDisconnect:
         print(f"[WS] Disconnected natively: {user.username}")

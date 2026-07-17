@@ -56,6 +56,8 @@ export default function RoomSelectionScreen({ route, navigation }) {
         
         if (modeId === 'mode_3_1') {
             navigation.navigate('MultiplayerTargetScore', { tier });
+        } else if (modeId === 'tictactoe_1' || modeId === 'tictactoe_2') {
+            navigation.navigate('MultiplayerTicTacToe', { tier, modeId });
         } else {
             Alert.alert("Yakında", "Bu mod henüz aktif değil.");
         }

@@ -9,7 +9,8 @@ const { width } = Dimensions.get('window');
 
 const GAME_MODES = [
     { id: 'mode_3_1', title: 'Hedef Tutturma', icon: 'scan-circle-outline', desc: 'Sayıları birleştir, tam sayıya ulaş.', active: true },
-    { id: 'tictactoe', title: 'Tic-Tac-Toe', icon: 'grid-outline', desc: 'Ortak özellikleri bul, satırı tamamla.', active: false },
+    { id: 'tictactoe_1', title: 'Takım XOX', icon: 'grid-outline', desc: 'Takımların ortak futbolcularını bul.', active: true },
+    { id: 'tictactoe_2', title: 'Oyuncu XOX', icon: 'people-circle-outline', desc: 'Futbolcuların ortak takımlarını bul.', active: true },
     { id: 'pyramid', title: 'Piramit', icon: 'podium-outline', desc: 'En iyileri doğru sırayla diz.', active: false },
     { id: 'tournament', title: 'Turnuva', icon: 'trophy-outline', desc: 'Büyük ödül için yarış.', active: false },
 ];
