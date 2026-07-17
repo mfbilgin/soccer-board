@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { GLOBAL_STYLES, COLORS, SIZES } from '../../utils/styles';
+import { GLOBAL_STYLES, COLORS, SIZES } from '../../theme';
 
 export default function TicTacToeResultScreen({ route, navigation }) {
   const { grid, cellAnswers, answers, xp_gained } = route.params;
