@@ -18,8 +18,8 @@ POPULAR_LEAGUES = {
     "GB1": "Premier League (İngiltere)",
     "ES1": "La Liga (İspanya)",
     "IT1": "Serie A (İtalya)",
-    "NL1": "Eredivisie",
-    "PO1": "Liga Portugal",
+    "L1": "Bundesliga (Almanya)",
+    "FR1": "Ligue 1 (Fransa)",
     "TR1": "Süper Lig",
     "INT": "Milli Takımlar",
     "ALL": "Tüm Ligler"
