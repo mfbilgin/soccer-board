@@ -8,7 +8,7 @@ from sqlalchemy import or_
 import models
 import schemas
 from database import get_db, engine
-from routers import auth, game, pyramid, social, multiplayer, mode_3_1, career_guess
+from routers import auth, game, pyramid, social, multiplayer, target_score, career_guess
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -21,7 +21,7 @@ app.include_router(pyramid.router)
 app.include_router(social.router)
 app.include_router(multiplayer.router)
 app.include_router(multiplayer.ws_router)
-app.include_router(mode_3_1.router)
+app.include_router(target_score.router)
 app.include_router(career_guess.router)
 
 # Güvenlik ve CORS Ayarları
