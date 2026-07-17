@@ -14,7 +14,6 @@ class TicTacToeEngine:
         if not _CACHE:
             self._initialize_pools()
         self.popular_team_ids = _CACHE['popular_team_ids']
-        self.popular_player_ids = _CACHE['popular_player_ids']
         self.elite_player_ids = _CACHE['elite_player_ids']
         self.team_players = _CACHE['team_players']
         self.player_teams = _CACHE['player_teams']
@@ -24,12 +23,7 @@ class TicTacToeEngine:
         top_teams = self.db.query(models.PlayerClubStat.team_id).group_by(models.PlayerClubStat.team_id).order_by(func.sum(models.PlayerClubStat.appearances).desc()).limit(150).all()
         popular_team_ids = [t[0] for t in top_teams]
 
-        top_players = self.db.query(
-            models.PlayerClubStat.player_id
-        ).group_by(models.PlayerClubStat.player_id).order_by(
-            func.sum(models.PlayerClubStat.appearances).desc()
-        ).limit(1500).all()
-        popular_player_ids = [p[0] for p in top_players]
+
 
         elite_players = self.db.query(
             models.PlayerClubStat.player_id
@@ -53,7 +47,6 @@ class TicTacToeEngine:
             player_teams[pid].add(tid)
 
         _CACHE['popular_team_ids'] = popular_team_ids
-        _CACHE['popular_player_ids'] = popular_player_ids
         _CACHE['elite_player_ids'] = elite_player_ids
         _CACHE['team_players'] = team_players
         _CACHE['player_teams'] = player_teams
