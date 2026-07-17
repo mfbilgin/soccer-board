@@ -153,12 +153,8 @@ export default function TargetScoreScreen({ navigation }) {
                             disabled={player !== null}
                         >
                             {player ? (
-                                <View style={isSmall ? styles.playerContentRow : styles.playerContentCol}>
-                                    <Image 
-                                        source={{ uri: player.image_url || 'https://cdn-icons-png.flaticon.com/512/847/847969.png' }} 
-                                        style={isSmall ? styles.playerImageSmall : styles.playerImageBig} 
-                                    />
-                                    <Text style={[styles.playerName, isSmall ? {flex: 1, textAlign: 'left'} : {textAlign: 'center'}]}>
+                                <View style={styles.playerContentCol}>
+                                    <Text style={[styles.playerName, {textAlign: 'center'}]}>
                                         {player.name}
                                     </Text>
                                 </View>
