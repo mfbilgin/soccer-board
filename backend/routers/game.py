@@ -45,8 +45,10 @@ def ensure_cache(db: Session):
         })
         PLAYER_CHOICES.append(p.search_name)
         
-    # Takımları cache'e al
-    teams = db.query(models.Team.id, models.Team.name, models.Team.short_name, models.Team.country).all()
+    # Takımları cache'e al (Sadece en az 1 oyuncusu olan takımlar)
+    valid_team_ids = db.query(models.PlayerClubStat.team_id).distinct()
+    teams = db.query(models.Team.id, models.Team.name, models.Team.short_name, models.Team.country)\
+              .filter(models.Team.id.in_(valid_team_ids)).all()
     for t in teams:
         TEAM_CACHE.append({
             "id": t.id,
