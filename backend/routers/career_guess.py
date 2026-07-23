@@ -12,42 +12,48 @@ router = APIRouter(prefix="/api/game/career-guess", tags=["Career Guess"])
 def generate_career_guess(db: Session = Depends(get_db)):
     """
     Kariyer Geçmişi modunu üretir.
-    En az 4 transferi (farklı takım geçmişi) olan popüler oyunculardan birini seçer.
+    En az 4 transferi (farklı takım geçmişi) olan, tercihen milli takımda
+    20'den fazla cap yapmış popüler oyunculardan birini seçer.
     """
-    valid_players_subquery = db.query(models.PlayerTeamHistory.player_id)\
-        .group_by(models.PlayerTeamHistory.player_id)\
-        .having(func.count(models.PlayerTeamHistory.id) >= 4)\
+    valid_players_subquery = db.query(models.PlayerTransfer.player_id)\
+        .group_by(models.PlayerTransfer.player_id)\
+        .having(func.count(models.PlayerTransfer.id) >= 4)\
         .subquery()
-        
+
+    capped_players_subquery = db.query(models.PlayerNationalStat.player_id)\
+        .group_by(models.PlayerNationalStat.player_id)\
+        .having(func.sum(models.PlayerNationalStat.caps) > 20)\
+        .subquery()
+
     random_player = db.query(models.Player).filter(
-        models.Player.id.in_(valid_players_subquery),
-        models.Player.international_caps > 20
+        models.Player.id.in_(db.query(valid_players_subquery.c.player_id)),
+        models.Player.id.in_(db.query(capped_players_subquery.c.player_id))
     ).order_by(func.random()).first()
-    
+
     if not random_player:
         random_player = db.query(models.Player).filter(
-            models.Player.id.in_(valid_players_subquery)
+            models.Player.id.in_(db.query(valid_players_subquery.c.player_id))
         ).order_by(func.random()).first()
-        
+
     if not random_player:
         raise HTTPException(status_code=500, detail="Yeterli takım geçmişine sahip oyuncu bulunamadı.")
-        
-    history = db.query(models.PlayerTeamHistory, models.Team)\
-        .join(models.Team, models.PlayerTeamHistory.team_id == models.Team.id)\
-        .filter(models.PlayerTeamHistory.player_id == random_player.id)\
-        .order_by(models.PlayerTeamHistory.start_year.asc())\
+
+    transfers = db.query(models.PlayerTransfer, models.Team)\
+        .join(models.Team, models.PlayerTransfer.to_team_id == models.Team.id)\
+        .filter(models.PlayerTransfer.player_id == random_player.id)\
+        .order_by(models.PlayerTransfer.transfer_date.asc())\
         .all()
-        
+
     teams_data = []
-    for h, t in history:
+    for tr, t in transfers:
         teams_data.append({
             "team_id": t.id,
-            "team_name": t.known_as or t.name,
+            "team_name": t.short_name or t.name,
             "logo_url": t.logo_url,
-            "start_year": h.start_year,
-            "end_year": h.end_year
+            "transfer_date": tr.transfer_date,
+            "is_loan": "kiral" in (tr.transfer_fee or "").lower()
         })
-        
+
     return {
         "target_player_id": random_player.id,
         "target_player_name": random_player.known_as,

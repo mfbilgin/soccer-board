@@ -2,12 +2,8 @@
 
 Kullanıcının, sistemin verdiği sabit sayıda futbolcuyla, belirli bir kapsamda (lig veya milli takım) verilen bir istatistik hedefine **olabildiğince yakınlaşmaya** çalıştığı bir moddur. **Amaç hedefi aşmak değil, hedefe tam olarak (ya da olabildiğince yakın) ulaşmaktır.**
 
-::: danger Online mod şu an production'da çalışmıyor
-`backend/routers/multiplayer.py` içindeki `initialize_game_state` (satır 65) ve `evaluate_mode31` (satır 265), `routers/target_score.py`'nin eski adı olan **`routers.mode_3_1`**'i import ediyor — bu modül artık yok (dosya `fbbc292` commit'inde `target_score.py` olarak yeniden adlandırıldı, import güncellenmedi). Sonuç: bir oda `mode31` (Target Score) modunda başlamaya çalıştığında sunucu `ModuleNotFoundError` ile çöküyor, oda hiç başlamıyor.
-
-**Kesin düzeltme:** `multiplayer.py`'deki iki satırda `from routers.mode_3_1 import ...` ifadesini `from routers.target_score import ...` ile değiştirmek yeterlidir; fonksiyon isimleri (`generate_puzzle`, `validate_submission`) değişmedi.
-
-Tek oyunculu (Singleplayer) mod bu bug'dan etkilenmez, `routers/target_score.py`'yi doğrudan REST üzerinden kullanır ve çalışır durumdadır.
+::: tip Düzeltildi
+Daha önce burada, online modun `routers.mode_3_1` adlı artık var olmayan bir modülü import ettiği için çöktüğü belirtiliyordu. Bu düzeltildi: `multiplayer.py` artık `routers/target_score.py`'yi import ediyor; ayrıca `validate_submission`'ın saf hesaplama kısmı (`compute_submission`) ayrı bir fonksiyona çıkarılarak, HTTP-dışı (WebSocket) çağrının kimlik doğrulama bağlamı olmadan çökmesi de ayrıca giderildi. Aşağıdaki akış artık gerçek koda uygundur.
 :::
 
 ## Oyun Amacı

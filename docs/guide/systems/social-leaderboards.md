@@ -7,12 +7,8 @@ Oyuncuların birbirleriyle etkileşimini artıran sosyal özellikler. `backend/r
 
 ## 2. Arkadaşlık Sistemi (Friendships)
 
-::: danger Kısmen kodlanmış — istek kabul etme endpoint'i yok
-- `POST /api/social/friends/add` (`{"username": "..."}`) çalışır: hedef kullanıcıyı bulur, kendine istek atmayı ve tekrar isteği engeller, `Friendship(status="pending")` satırı oluşturur.
-- `GET /api/social/friends`, yalnızca `status == "accepted"` olan kayıtları döner.
-- **Ama `status`'ü `"pending"`'den `"accepted"`'e çeviren hiçbir endpoint kodda yok.** Sonuç: bir arkadaşlık isteği gönderilebilir ama hiçbir zaman kabul edilemez, `GET /api/social/friends` pratikte **her zaman boş liste** döner.
-
-**Kesin düzeltme:** `POST /api/social/friends/accept` (`{"username": "..."}`) endpoint'i eklenmeli — istek gönderenle alıcı arasındaki `pending` kaydı bulup `status = "accepted"` yapmalı. Reddetme için de `POST /api/social/friends/reject` (kaydı siler) eklenmelidir.
+::: tip Düzeltildi
+Daha önce burada, arkadaşlık isteklerinin kabul edilemediği (istek gönderme var ama kabul endpoint'i yok, `GET /api/social/friends` pratikte hep boş dönüyordu) belirtiliyordu. Bu düzeltildi: `POST /api/social/friends/accept` ve `POST /api/social/friends/reject` (`{"username": "..."}`, `add_friend` ile aynı şema) eklendi — `accept`, göndericiyle alıcı arasındaki `pending` kaydı `"accepted"`e çevirir; `reject` aynı kaydı siler.
 :::
 
 - **Arkadaş Ekleme:** Kullanıcı adıyla (`username`) istek gönderilir — GDD'deki "User#1234" tarzı benzersiz kullanıcı kodu **kullanılmaz**, doğrudan `username` alanı kullanılır (kesinleştirilmiş karar: ek bir "kullanıcı kodu" alanı eklenmeyecek, `username` zaten `unique=True`).

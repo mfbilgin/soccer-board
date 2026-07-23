@@ -4,19 +4,15 @@ Oyuncuların profillerini geliştirdikleri, kişiselleştirdikleri ve yetenekler
 
 ## 1. XP ve Level Sistemi
 
-::: danger Kodda iki farklı, birbiriyle uyumsuz leveling mantığı var
-- **`services/economy.py`'deki `add_xp()`** fonksiyonu, XP'yi kümülatif toplam kabul edip `level = (toplam_xp / 100) ^ (1/1.5)` formülüyle hesaplıyor — ama bu fonksiyon **kod tabanının hiçbir yerinden çağrılmıyor**, tamamen ölü kod.
-- **Gerçekte kullanılan (aktif) mantık `routers/target_score.py`'nin `validate` endpoint'inde inline yazılı:** XP bir "seviye barı" gibi davranır — `required_xp = 100 * level^1.5` doldukça `xp -= required_xp` ile sıfırlanır ve `level += 1` olur (birden fazla seviye tek seferde atlanabilir). **Kesin/kanonik formül budur.**
-- **`routers/game.py`'deki TicTacToe `surrender` endpoint'i** ise `current_user.xp += xp_gained` ile XP'yi doğrudan artırır ama **hiç level-up kontrolü yapmaz** — TicTacToe'dan kazanılan XP asla seviye atlatmaz (gerçek bir eksiklik/bug).
-
-**Kesin düzeltme:** `target_score.py`'deki inline leveling bloğu (`required_xp` döngüsü) `services/economy.py` içine `add_xp_and_check_level(db, user, xp_amount)` adıyla tek bir fonksiyon olarak taşınmalı; hem `target_score.py` hem `game.py`'nin `surrender` endpoint'i bu ortak fonksiyonu çağırmalı. Eski, kullanılmayan `add_xp()` formülü silinmelidir.
+::: tip Düzeltildi
+Daha önce burada, `services/economy.py`'nin kullanılmayan/uyumsuz bir `add_xp()` formülü barındırdığı ve TicTacToe'nun `surrender` endpoint'inin hiç level-up tetiklemediği belirtiliyordu. İkisi de düzeltildi: kanonik per-level-bar formülü artık `services/economy.py`'deki tek bir `add_xp_and_check_level(db, user, xp_amount)` fonksiyonunda yaşıyor; hem `target_score.py`'nin `validate` endpoint'i hem `game.py`'nin `surrender` endpoint'i bu ortak fonksiyonu çağırıyor.
 :::
 
-Oyuncular, oynadıkları her (online veya offline) oyun modundan maç sonunda bir miktar XP kazanırlar ve `required_xp = 100 * level^1.5` eşiğini aşarak seviye atlarlar.
+Oyuncular, oynadıkları her (online veya offline) oyun modundan maç sonunda bir miktar XP kazanırlar ve `required_xp = 100 * level^1.5` eşiğini aşarak seviye atlarlar (`add_xp_and_check_level`, `services/economy.py` — kodda doğrulandı).
 
 **XP Kazanım Mantığı (mod bazlı, kesin — bkz. ilgili mod sayfaları):**
 - [Stats Target](/guide/game-modes/stats-target) ve [Extreme Squad](/guide/game-modes/extreme-squad): sapma yüzdesine göre 5 kademeli XP (25/25/15/10/5).
-- [TicTacToe](/guide/game-modes/tictactoe-4x4): doğru hücre başına 10 XP (singleplayer `surrender` üzerinden; yukarıdaki bug nedeniyle şu an level-up tetiklemiyor).
+- [TicTacToe](/guide/game-modes/tictactoe-4x4): doğru hücre başına 10 XP (singleplayer `surrender` üzerinden; artık düzgün şekilde level-up tetikliyor).
 - **Online Mod (genel kural):** Kazanan/kaybeden ayrımına dayalı XP miktarı şu an **kodlanmamıştır** — sadece Chip/Rating değişir (`award_winnings`, `update_rating`); online maçlardan XP kazanımı henüz backend'e eklenmemiştir. Eklenecekse en basit çözüm: kazanana sabit **50 XP**, kaybedene sabit **10 XP**, aynı `add_xp_and_check_level` fonksiyonu üzerinden `evaluate_*` fonksiyonlarının içine eklenerek.
 
 **2x Boost:** **(Kodlanmadı)** — Gems karşılığında XP'ye süreli çarpan uygulama mekanizması yok, bkz. [Gems & Chips](/guide/systems/economy-gems-chips).

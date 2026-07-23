@@ -45,6 +45,44 @@ def add_friend(request: schemas.FriendRequest, db: Session = Depends(get_db), cu
     db.commit()
     return {"message": "Friend request sent"}
 
+@router.post("/friends/accept")
+def accept_friend(request: schemas.FriendRequest, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    target_user = db.query(models.User).filter(models.User.username == request.username).first()
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    pending = db.query(models.Friendship).filter(
+        models.Friendship.user_id == target_user.id,
+        models.Friendship.friend_id == current_user.id,
+        models.Friendship.status == "pending"
+    ).first()
+
+    if not pending:
+        raise HTTPException(status_code=404, detail="Bekleyen bir istek bulunamadı")
+
+    pending.status = "accepted"
+    db.commit()
+    return {"message": "Friend request accepted"}
+
+@router.post("/friends/reject")
+def reject_friend(request: schemas.FriendRequest, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    target_user = db.query(models.User).filter(models.User.username == request.username).first()
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    pending = db.query(models.Friendship).filter(
+        models.Friendship.user_id == target_user.id,
+        models.Friendship.friend_id == current_user.id,
+        models.Friendship.status == "pending"
+    ).first()
+
+    if not pending:
+        raise HTTPException(status_code=404, detail="Bekleyen bir istek bulunamadı")
+
+    db.delete(pending)
+    db.commit()
+    return {"message": "Friend request rejected"}
+
 @router.get("/friends")
 def get_friends(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     # Friends where status="accepted"

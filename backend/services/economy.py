@@ -29,24 +29,32 @@ def award_winnings(db: Session, winner_id: int, total_pool: int) -> int:
     db.refresh(user)
     return winnings
 
-def add_xp(db: Session, user_id: int, xp_amount: int):
-    """Kullanıcıya XP ekler ve gerekiyorsa seviye (Level) atlatır."""
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        return
-        
+def add_xp_and_check_level(db: Session, user: User, xp_amount: int) -> dict:
+    """Kullanıcıya XP ekler, seviye barını doldukça sıfırlayarak level atlatır.
+
+    Kanonik formül (target_score.py'den taşındı): required_xp = 100 * level^1.5,
+    xp bu eşiği geçtikçe düşülür ve level artar (tek seferde birden fazla
+    seviye atlanabilir).
+    """
     user.xp += xp_amount
-    
-    # GDD formula: XP = 100 * level^1.5 
-    # => Level = (XP / 100) ^ (1/1.5)
-    new_level = max(1, int((user.xp / 100) ** (1/1.5)))
-    
-    if new_level > user.level:
-        user.level = new_level
-        
+    leveled_up = False
+    required_xp = int(100 * (user.level ** 1.5))
+
+    while user.xp >= required_xp:
+        user.xp -= required_xp
+        user.level += 1
+        leveled_up = True
+        required_xp = int(100 * (user.level ** 1.5))
+
     db.commit()
     db.refresh(user)
-    return user.level
+
+    return {
+        "new_xp": user.xp,
+        "new_level": user.level,
+        "required_xp": required_xp,
+        "leveled_up": leveled_up,
+    }
 
 def update_rating(db: Session, winner_id: int, loser_id: int):
     """ELO (Rating) güncellemesini yapar."""

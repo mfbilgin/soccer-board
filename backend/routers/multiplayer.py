@@ -62,7 +62,7 @@ async def initialize_game_state(room_id: str):
     if room.game_mode == "mode31":
         db = SessionLocal()
         try:
-            from routers.mode_3_1 import generate_puzzle
+            from routers.target_score import generate_puzzle
             puzzle = generate_puzzle(db)
             room.game_state = {
                 "puzzle": puzzle,
@@ -262,13 +262,13 @@ async def evaluate_mode31(room_id: str):
     
     db = SessionLocal()
     try:
-        from routers.mode_3_1 import validate_submission
+        from routers.target_score import compute_submission
         results = {}
         distances = {}
         for uid in room.players.keys():
             sub = submissions.get(uid, {})
             p_ids = sub.get("player_ids", [])
-            
+
             # Anti-Cheat / Disqualification Check
             if len(p_ids) < puzzle["player_count"]:
                 # Incomplete board -> automatic forfeit (infinite distance)
@@ -276,14 +276,8 @@ async def evaluate_mode31(room_id: str):
                 distances[uid] = 999999
                 log_match_event(room_id, uid, f"Disqualified: Incomplete submission ({len(p_ids)}/{puzzle['player_count']})")
                 continue
-                
-            payload = {
-                "league": puzzle["league"],
-                "metric": puzzle["metric"],
-                "target": puzzle["target"],
-                "player_ids": p_ids
-            }
-            res = validate_submission(payload, db)
+
+            res = compute_submission(db, puzzle["league"], puzzle["metric"], p_ids, puzzle["target"])
             results[uid] = res
             distances[uid] = res["distance"]
             log_match_event(room_id, uid, f"Valid submission: dist {res['distance']}, sum {res.get('total_sum', 0)}")
@@ -461,7 +455,7 @@ async def websocket_endpoint(websocket: WebSocket, token: str = Query(...)):
                         try:
                             from tictactoe import TicTacToeEngine
                             engine = TicTacToeEngine(db)
-                            valid = engine.validate_answer(grid["type"], row_id, col_id, entity_id)
+                            valid, _, _ = engine.validate_guess(row_id, col_id, entity_id, grid["type"])
                         finally:
                             db.close()
                             

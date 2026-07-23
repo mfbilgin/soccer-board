@@ -8,6 +8,7 @@ from database import get_db
 from routers.auth import get_current_user
 from tictactoe import TicTacToeEngine
 from rapidfuzz import process, fuzz
+from services.economy import add_xp_and_check_level
 
 # --- FUZZY SEARCH CACHE ---
 PLAYER_CACHE = []
@@ -113,14 +114,13 @@ class SurrenderRequest(BaseModel):
 def surrender_game(req: SurrenderRequest, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
     engine = TicTacToeEngine(db)
     answers = engine.get_answers(req.grid_type, req.row_ids, req.col_ids)
-    
+
     xp_gained = req.correct_count * 10
+    level_info = {}
     if xp_gained > 0 and current_user:
-        current_user.xp += xp_gained
-        db.commit()
-        db.refresh(current_user)
-        
-    return {"answers": answers, "xp_gained": xp_gained}
+        level_info = add_xp_and_check_level(db, current_user, xp_gained)
+
+    return {"answers": answers, "xp_gained": xp_gained, **level_info}
 
 @router.get("/search", response_model=schemas.SearchResponse)
 def search_entity(

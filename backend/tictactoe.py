@@ -262,7 +262,7 @@ class TicTacToeEngine:
                     common = list(r_players & c_players)
                     if common:
                         # Popüler olana öncelik ver
-                        common.sort(key=lambda pid: self.popular_player_ids.index(pid) if pid in self.popular_player_ids else 9999)
+                        common.sort(key=lambda pid: self.elite_player_ids.index(pid) if pid in self.elite_player_ids else 9999)
                         p = self.db.query(models.Player).filter(models.Player.id == common[0]).first()
                         answers[f"{r}-{c}"] = p.known_as if p else "Bilinmeyen Oyuncu"
         elif grid_type == 2:

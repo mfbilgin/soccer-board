@@ -8,6 +8,7 @@ import math
 import models
 from database import get_db
 from routers.auth import get_current_user
+from services.economy import add_xp_and_check_level
 
 router = APIRouter(prefix="/api/mode31", tags=["Mode 3.1: Kariyer İstatistiği Avı"])
 
@@ -132,20 +133,15 @@ def validate_single(payload: dict, db: Session = Depends(get_db)):
         else:
             return {"valid": False, "message": "Bu oyuncu bu ligde oynamamış."}
 
-@router.post("/validate")
-def validate_submission(payload: dict, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    league = payload.get("league")
-    metric = payload.get("metric")
-    player_ids = payload.get("player_ids", [])
-    target = payload.get("target")
-    
-    if not all([league, metric, player_ids, target is None]): # target 0 olabilir, bu yüzden is None kontrolü
-        if target is None:
-            raise HTTPException(status_code=400, detail="Eksik parametreler")
-            
+def compute_submission(db: Session, league: str, metric: str, player_ids: list, target: int) -> dict:
+    """Saf hesaplama: verilen oyuncuların toplamını ve hedefe uzaklığını hesaplar.
+
+    Kullanıcıya (XP/level) dokunmaz - hem HTTP endpoint'i hem de multiplayer'daki
+    online değerlendirme (evaluate_mode31) bu fonksiyonu paylaşır.
+    """
     total_sum = 0
     results = []
-    
+
     for pid in player_ids:
         # validate-single mantığıyla çek
         if league == "INT":
@@ -160,10 +156,10 @@ def validate_submission(payload: dict, db: Session = Depends(get_db), current_us
                 comp = db.query(models.Competition).filter(models.Competition.name == league).first()
                 query = query.filter(models.PlayerClubStat.competition_id == comp.id if comp else -1)
             val = query.scalar()
-            
+
         val = val or 0
         total_sum += val
-        
+
         player = db.query(models.Player).filter(models.Player.id == pid).first()
         name = player.known_as if player else "Bilinmeyen"
         results.append({
@@ -171,14 +167,14 @@ def validate_submission(payload: dict, db: Session = Depends(get_db), current_us
             "name": name,
             "value": val
         })
-        
+
     distance = abs(target - total_sum)
-    
+
     # Yeni XP Mantığı (%1 ve %10 kuralı)
     # distance 0 ise %0 sapma.
     # %1 sapma hesaplaması
     deviation_percent = (distance / max(1, target)) * 100
-    
+
     xp_gained = 5
     tier = 4
     if distance == 0:
@@ -193,29 +189,32 @@ def validate_submission(payload: dict, db: Session = Depends(get_db), current_us
     elif deviation_percent <= 25.0:
         xp_gained = 10
         tier = 3
-        
-    current_user.xp += xp_gained
-    leveled_up = False
-    required_xp = int(100 * (current_user.level ** 1.5))
-    
-    while current_user.xp >= required_xp:
-        current_user.xp -= required_xp
-        current_user.level += 1
-        leveled_up = True
-        required_xp = int(100 * (current_user.level ** 1.5))
-        
-    db.commit()
-    db.refresh(current_user)
-        
+
     return {
         "total_sum": total_sum,
         "target": target,
         "distance": distance,
         "details": results,
         "xp_gained": xp_gained,
-        "new_xp": current_user.xp,
-        "new_level": current_user.level,
-        "required_xp": required_xp,
-        "leveled_up": leveled_up,
         "tier": tier
+    }
+
+
+@router.post("/validate")
+def validate_submission(payload: dict, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    league = payload.get("league")
+    metric = payload.get("metric")
+    player_ids = payload.get("player_ids", [])
+    target = payload.get("target")
+
+    if not all([league, metric, player_ids, target is None]): # target 0 olabilir, bu yüzden is None kontrolü
+        if target is None:
+            raise HTTPException(status_code=400, detail="Eksik parametreler")
+
+    result = compute_submission(db, league, metric, player_ids, target)
+    level_info = add_xp_and_check_level(db, current_user, result["xp_gained"])
+
+    return {
+        **result,
+        **level_info,
     }

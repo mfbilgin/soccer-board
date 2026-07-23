@@ -2,11 +2,8 @@
 
 Bu mod, klasik Tic-Tac-Toe (XOX) oyununun futbol bilgisiyle harmanlanmış, taktiksel ve bilgiye dayalı bir versiyonudur. Oyuncular 4x4'lük bir matrisin kesişim noktalarındaki hücreleri doğru tahminler yaparak ele geçirmeye ve 3'lü bir seri (yatay, dikey veya çapraz) oluşturmaya çalışırlar.
 
-::: danger İki bilinen bug — online mod şu an oynanamıyor
-1. **Multiplayer tahmin tamamen çalışmıyor:** `backend/routers/multiplayer.py` satır 464, `engine.validate_answer(grid["type"], row_id, col_id, entity_id)` çağırıyor. Ama `tictactoe.py`'de böyle bir metod **yok** — gerçek metod adı `validate_guess(row_id, col_id, guess_id, grid_type)` (hem isim hem parametre sırası farklı). Sonuç: online TicTacToe'da yapılan **her tahmin** `AttributeError` ile çöküyor. **Kesin düzeltme:** o satırı `engine.validate_guess(row_id, col_id, entity_id, grid["type"])` yapmak yeterli.
-2. **Cevap açma (`get_answers`) Takım×Takım tipinde çöküyor:** `tictactoe.py`'deki `get_answers`, grid tipi 1 (Takım×Takım) için `self.popular_player_ids` alanını kullanıyor ama bu alan `__init__`'te hiç atanmamış (yalnızca `elite_player_ids`, `popular_team_ids`, `team_players`, `player_teams` cache'leniyor). Bu, hem singleplayer "pes et" akışını (`POST /api/game/tictactoe/surrender`) hem de multiplayer'da oyun bittiğinde cevapları açma akışını (`evaluate_tictactoe_winner`) tip-1 gridlerde çökertir. **Kesin düzeltme:** `self.popular_player_ids.index(...)` yerine zaten var olan `self.elite_player_ids.index(...)` kullanmak (aynı amaca hizmet ediyor: popülerliğe göre sıralı oyuncu ID listesi).
-
-Tek oyunculu (Singleplayer) tahmin akışı (`POST /api/game/tictactoe/guess`) bu bug'lardan etkilenmez, doğru metodu doğru parametrelerle çağırıyor.
+::: tip Düzeltildi
+Daha önce burada iki bug'a dikkat çekiliyordu: (1) `multiplayer.py`'nin var olmayan bir `engine.validate_answer(...)` metodunu çağırdığı için online'da her tahminin çökmesi, (2) `get_answers`'ın hiç atanmamış bir `self.popular_player_ids` alanını kullandığı için Takım×Takım gridlerinde cevap açmanın çökmesi. İkisi de düzeltildi: ilki `engine.validate_guess(row_id, col_id, entity_id, grid["type"])` çağrısına, ikincisi zaten var olan `self.elite_player_ids`'in kullanılmasına çevrildi. Aşağıdaki akış artık gerçek koda uygundur.
 :::
 
 ## Oyun Amacı ve Matris Türleri
