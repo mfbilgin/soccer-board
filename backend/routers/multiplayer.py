@@ -109,6 +109,37 @@ async def initialize_game_state(room_id: str):
         finally:
             db.close()
 
+    elif room.game_mode == "initials_guess":
+        db = SessionLocal()
+        try:
+            from initials_guess import InitialsGuessEngine
+            engine = InitialsGuessEngine(db)
+            p1, p2 = list(room.players.keys())
+            if random.random() > 0.5:
+                p1, p2 = p2, p1
+            pools = engine.generate_letter_pools()
+            room.game_state = {
+                "start_picker": p1,
+                "end_picker": p2,
+                "pools": pools,
+                "picks": {},
+                "round_num": 1,
+                "score": {pid: 0 for pid in room.players},
+                "phase": "picking",
+            }
+            await room.broadcast({
+                "type": "game_update",
+                "action": "initials_pick_phase",
+                "start_picker": p1,
+                "end_picker": p2,
+                "start_pool": pools["start_pool"],
+                "end_pool": pools["end_pool"],
+                "round_num": 1,
+                "score": room.game_state["score"],
+            })
+        finally:
+            db.close()
+
     elif room.game_mode == "flag_eleven":
         db = SessionLocal()
         try:
@@ -291,6 +322,98 @@ async def evaluate_tictactoe_winner(room_id: str, reason: str, explicit_winner: 
                 p1: {"message": f"{sum(1 for c in board.values() if c['owner'] == p1)} Hücre"},
                 p2: {"message": f"{sum(1 for c in board.values() if c['owner'] == p2)} Hücre"}
             }
+        })
+    finally:
+        db.close()
+        for pid in list(room.players.keys()):
+            if pid in manager.user_rooms:
+                del manager.user_rooms[pid]
+        if room_id in manager.rooms:
+            del manager.rooms[room_id]
+
+async def initials_guess_timer(room_id: str):
+    try:
+        while True:
+            room = manager.rooms.get(room_id)
+            if not room or room.state != "playing":
+                return
+
+            if len(room.disconnect_tasks) > 0:
+                await asyncio.sleep(1)
+                continue
+
+            turn_end = room.game_state.get("turn_end_time", 0)
+            if time.time() >= turn_end:
+                log_match_event(room_id, "SYSTEM", "Initials Guess: sure doldu, tur berabere.")
+                await initials_guess_next_round(room_id, round_winner=None)
+                return
+
+            await asyncio.sleep(1)
+    except asyncio.CancelledError:
+        pass
+
+async def initials_guess_next_round(room_id: str, round_winner: str = None):
+    room = manager.rooms.get(room_id)
+    if not room or room.state != "playing": return
+    gs = room.game_state
+
+    if "timer_task" in gs:
+        gs["timer_task"].cancel()
+
+    if round_winner:
+        gs["score"][round_winner] += 1
+
+    await room.broadcast({
+        "type": "game_update",
+        "action": "initials_round_result",
+        "round_winner": round_winner,
+        "score": gs["score"],
+    })
+
+    if round_winner and gs["score"][round_winner] >= 3:
+        await finish_initials_guess(room_id, round_winner)
+        return
+
+    db = SessionLocal()
+    try:
+        from initials_guess import InitialsGuessEngine
+        engine = InitialsGuessEngine(db)
+        pools = engine.generate_letter_pools()
+        gs["pools"] = pools
+        gs["picks"] = {}
+        gs["phase"] = "picking"
+        gs["round_num"] += 1
+        await room.broadcast({
+            "type": "game_update",
+            "action": "initials_pick_phase",
+            "start_picker": gs["start_picker"],
+            "end_picker": gs["end_picker"],
+            "start_pool": pools["start_pool"],
+            "end_pool": pools["end_pool"],
+            "round_num": gs["round_num"],
+            "score": gs["score"],
+        })
+    finally:
+        db.close()
+
+async def finish_initials_guess(room_id: str, winner_id: str):
+    room = manager.rooms.get(room_id)
+    if not room: return
+    room.state = "finished"
+    if "timer_task" in room.game_state:
+        room.game_state["timer_task"].cancel()
+
+    db = SessionLocal()
+    try:
+        loser_id = next(pid for pid in room.players.keys() if pid != winner_id)
+        log_match_event(room_id, "SYSTEM", f"Initials Guess bitti. Kazanan: {winner_id}")
+        award_winnings(db, int(winner_id), room.entry_fee * 2)
+        update_rating(db, int(winner_id), int(loser_id))
+
+        await room.broadcast({
+            "type": "game_over",
+            "winner_id": winner_id,
+            "score": room.game_state["score"],
         })
     finally:
         db.close()
@@ -930,6 +1053,62 @@ async def websocket_endpoint(websocket: WebSocket, token: str = Query(...)):
                             await evaluate_mode31(room_id)
                         else:
                             await room.broadcast({"type": "player_ready", "user_id": user_id})
+
+            elif action == "initials_pick_letter":
+                room_id = manager.user_rooms.get(user_id)
+                if room_id and room_id in manager.rooms:
+                    room = manager.rooms[room_id]
+                    if room.game_mode == "initials_guess" and room.state == "playing" and room.game_state.get("phase") == "picking":
+                        gs = room.game_state
+                        letter = (data.get("letter") or "").upper()
+
+                        if user_id == gs["start_picker"] and letter in gs["pools"]["start_pool"]:
+                            gs["picks"][user_id] = letter
+                        elif user_id == gs["end_picker"] and letter in gs["pools"]["end_pool"]:
+                            gs["picks"][user_id] = letter
+                        else:
+                            continue
+
+                        await room.broadcast({"type": "game_update", "action": "initials_letter_locked", "user_id": user_id})
+
+                        if len(gs["picks"]) == 2:
+                            gs["phase"] = "guessing"
+                            gs["start_letter"] = gs["picks"][gs["start_picker"]]
+                            gs["end_letter"] = gs["picks"][gs["end_picker"]]
+                            gs["turn_end_time"] = time.time() + 30
+                            gs["timer_task"] = asyncio.create_task(initials_guess_timer(room_id))
+                            await room.broadcast({
+                                "type": "game_update",
+                                "action": "initials_round_ready",
+                                "start_letter": gs["start_letter"],
+                                "end_letter": gs["end_letter"],
+                                "turn_end_time": gs["turn_end_time"],
+                            })
+
+            elif action == "initials_guess_answer":
+                room_id = manager.user_rooms.get(user_id)
+                if room_id and room_id in manager.rooms:
+                    room = manager.rooms[room_id]
+                    if room.game_mode == "initials_guess" and room.state == "playing" and room.game_state.get("phase") == "guessing":
+                        gs = room.game_state
+                        try:
+                            entity_id = int(data.get("entity_id"))
+                        except (TypeError, ValueError):
+                            continue
+
+                        db = SessionLocal()
+                        try:
+                            from initials_guess import InitialsGuessEngine
+                            engine = InitialsGuessEngine(db)
+                            correct = engine.validate_guess(gs["start_letter"], gs["end_letter"], entity_id)
+                        finally:
+                            db.close()
+
+                        if correct:
+                            log_match_event(room_id, user_id, f"Initials Guess: correct guess (player {entity_id}).")
+                            await initials_guess_next_round(room_id, round_winner=user_id)
+                        else:
+                            await websocket.send_json({"type": "initials_wrong"})
 
             elif action == "flag_eleven_guess":
                 room_id = manager.user_rooms.get(user_id)

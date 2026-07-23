@@ -2,7 +2,9 @@
 
 Harf kısıtlamalarıyla hafızayı zorlayan, kelime türetme ve futbol bilgisini birleştiren spesifik bir mod.
 
-**Durum:** Kodlanmadı. Bu sayfa tam bir uygulama şartnamesidir.
+**Durum:** Kodlandı ve çalışıyor (hem singleplayer hem online).
+
+Kod karşılığı: `backend/initials_guess.py` (`InitialsGuessEngine` — (start_letter,end_letter)->oyuncu önbelleği, "hangi kombinasyon seçilirse seçilsin çözülebilir" garantisini gerçek 5x5 kapsama kontrolüyle sağlar), `backend/routers/initials_guess.py` (`/letter-pools`, `/verify`, `/reveal`), `backend/routers/multiplayer.py`'deki `initials_guess_timer`/`initials_guess_next_round` (online: harf seçim fazı + best-of-5 buzzer, mevcut tier kuyruğu üzerinden `game_mode: "initials_guess"`), `frontend/screens/singleplayer/InitialsGuessScreen.js`, `frontend/screens/multiplayer/MultiplayerInitialsGuessScreen.js`. Bu sayfa tam bir uygulama şartnamesidir.
 
 ## Tanım
 Bilinen adı belirli bir **harfle başlayıp** belirli bir **harfle biten** bir futbolcuyu ilk söyleyen/yazan kazanır.

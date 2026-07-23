@@ -66,6 +66,8 @@ export default function RoomSelectionScreen({ route, navigation }) {
             navigation.navigate('FindTwo', { tier });
         } else if (modeId === 'flag_eleven') {
             navigation.navigate('MultiplayerFlagEleven', { tier });
+        } else if (modeId === 'initials_guess') {
+            navigation.navigate('MultiplayerInitialsGuess', { tier });
         } else {
             Alert.alert("Yakında", "Bu mod henüz aktif değil.");
         }

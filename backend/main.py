@@ -8,7 +8,7 @@ from sqlalchemy import or_
 import models
 import schemas
 from database import get_db, engine, SessionLocal
-from routers import auth, game, pyramid, social, multiplayer, target_score, career_guess, extreme_squad, flag_eleven
+from routers import auth, game, pyramid, social, multiplayer, target_score, career_guess, extreme_squad, flag_eleven, initials_guess
 import tictactoe
 
 models.Base.metadata.create_all(bind=engine)
@@ -26,6 +26,7 @@ app.include_router(target_score.router)
 app.include_router(career_guess.router)
 app.include_router(extreme_squad.router)
 app.include_router(flag_eleven.router)
+app.include_router(initials_guess.router)
 
 # Güvenlik ve CORS Ayarları
 # Production ortamında allow_origins spesifik domainlerle kısıtlanmalıdır.

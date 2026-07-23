@@ -14,6 +14,7 @@ const GAME_MODES = [
     { id: 'career_guess', title: 'Kariyer Yolu', icon: 'airplane-outline', desc: 'Transfer geçmişine bakarak futbolcuyu tahmin et.', route: 'CareerGuess', params: {}, active: true },
     { id: 'extreme_squad', title: 'Ekstrem Kadro', icon: 'body-outline', desc: 'Verilen 11 takımdan en genç/en uzun kadroyu kur.', route: 'ExtremeSquad', params: {}, active: true },
     { id: 'flag_eleven', title: 'Bayrak XI', icon: 'flag-outline', desc: 'Bayraklardan kadronun hangi takım olduğunu bul.', route: 'FlagEleven', params: {}, active: true },
+    { id: 'initials_guess', title: 'Harf Düellosu', icon: 'text-outline', desc: 'Verilen harflerle başlayıp biten futbolcuyu bul.', route: 'InitialsGuess', params: {}, active: true },
     { id: 'tictactoe_4x4', title: '4x4 Matris', icon: 'apps-outline', desc: 'Devasa 4x4 matrisi çöz.', route: 'TicTacToe4x4', params: {}, active: false },
     { id: 'chain_reaction', title: 'Örgü (Zincir)', icon: 'link-outline', desc: 'Oyuncu-Takım zincirini kur.', route: 'ChainReaction', params: {}, active: false },
 ];
