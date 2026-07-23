@@ -2,7 +2,9 @@
 
 Bir ligde/milli takımda/kulüpte tüm zamanların bir metrikte (gol, asist veya maç sayısı) **ilk 10** futbolcusunu tahmin etmeye dayanan bir hafıza ve bilgi yarışmasıdır.
 
-**Durum:** Singleplayer kodlanmış ve çalışıyor. Online kısmı (aşağıda) henüz kodlanmadı.
+**Durum:** Kodlandı ve çalışıyor (hem singleplayer hem online).
+
+Online kısmının kod karşılığı: `backend/routers/pyramid.py`'den çıkarılan `generate_puzzle(db)` (singleplayer endpoint'i değiştirmeden, aynı mantığı multiplayer'la paylaşır), `backend/routers/multiplayer.py`'deki `top10_timer`/`top10_advance`/`finish_top10` (mevcut tier kuyruğu üzerinden `game_mode: "top10"` — yayına gitmeden önce `_top10_public_items` gizli hücrelerin ismini kırpar, aksi halde ilk paket cevapları ifşa ederdi), `frontend/screens/multiplayer/MultiplayerTop10Screen.js`.
 
 Singleplayer akışının kod karşılığı `backend/routers/pyramid.py` (`/api/game/pyramid/generate`) ve `frontend/screens/singleplayer/PyramidScreen.js` dosyalarındadır — isimlendirme tarihsel bir nedenle "Pyramid" olarak kalmıştır, ama uyguladığı oyun burada anlatılan Top 10 modudur. [Piramit Sıralaması](/guide/game-modes/pyramid-ranking) sayfasındaki farklı (evet/hayır fikir belirtme) mod, ayrı bir konsepttir.
 

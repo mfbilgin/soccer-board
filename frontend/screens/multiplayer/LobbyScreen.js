@@ -16,7 +16,7 @@ const GAME_MODES = [
     { id: 'find_two', title: 'Kesişim Düellosu', icon: 'flash-outline', desc: '2 takım/ülkede oynayan oyuncuyu ilk yaz.', active: true },
     { id: 'flag_eleven', title: 'Bayrak XI', icon: 'flag-outline', desc: 'Bayraklardan kadronun takımını ilk bul.', active: true },
     { id: 'initials_guess', title: 'Harf Düellosu', icon: 'text-outline', desc: 'Verilen harflerle biten futbolcuyu ilk yaz.', active: true },
-    { id: 'pyramid', title: 'Piramit', icon: 'podium-outline', desc: 'En iyileri doğru sırayla diz.', active: false },
+    { id: 'top10', title: 'İlk 10 Listesi', icon: 'podium-outline', desc: 'Sırayla tahmin et, en yüksek puanı topla.', active: true },
     { id: 'tournament', title: 'Turnuva', icon: 'trophy-outline', desc: 'Büyük ödül için yarış.', active: false },
 ];
 

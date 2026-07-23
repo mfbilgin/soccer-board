@@ -68,6 +68,8 @@ export default function RoomSelectionScreen({ route, navigation }) {
             navigation.navigate('MultiplayerFlagEleven', { tier });
         } else if (modeId === 'initials_guess') {
             navigation.navigate('MultiplayerInitialsGuess', { tier });
+        } else if (modeId === 'top10') {
+            navigation.navigate('MultiplayerTop10', { tier });
         } else {
             Alert.alert("Yakında", "Bu mod henüz aktif değil.");
         }

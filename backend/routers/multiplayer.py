@@ -109,6 +109,35 @@ async def initialize_game_state(room_id: str):
         finally:
             db.close()
 
+    elif room.game_mode == "top10":
+        db = SessionLocal()
+        try:
+            from routers.pyramid import generate_puzzle
+            puzzle = generate_puzzle(db)
+            p1, p2 = list(room.players.keys())
+            if random.random() > 0.5:
+                p1, p2 = p2, p1
+            room.game_state = {
+                "puzzle": puzzle,
+                "revealed": [item["id"] for item in puzzle["items"] if not item["hidden"]],
+                "active_player": p1,
+                "score": {pid: 0 for pid in room.players},
+                "consecutive_misses": 0,
+                "turn_end_time": time.time() + 20,
+            }
+            room.game_state["timer_task"] = asyncio.create_task(top10_timer(room_id))
+            await room.broadcast({
+                "type": "game_update",
+                "action": "top10_ready",
+                "title": puzzle["title"],
+                "subtitle": puzzle["subtitle"],
+                "items": _top10_public_items(room.game_state),
+                "active_player": p1,
+                "turn_end_time": room.game_state["turn_end_time"],
+            })
+        finally:
+            db.close()
+
     elif room.game_mode == "initials_guess":
         db = SessionLocal()
         try:
@@ -322,6 +351,110 @@ async def evaluate_tictactoe_winner(room_id: str, reason: str, explicit_winner: 
                 p1: {"message": f"{sum(1 for c in board.values() if c['owner'] == p1)} Hücre"},
                 p2: {"message": f"{sum(1 for c in board.values() if c['owner'] == p2)} Hücre"}
             }
+        })
+    finally:
+        db.close()
+        for pid in list(room.players.keys()):
+            if pid in manager.user_rooms:
+                del manager.user_rooms[pid]
+        if room_id in manager.rooms:
+            del manager.rooms[room_id]
+
+def _top10_public_items(gs: dict) -> list:
+    revealed = set(gs["revealed"])
+    out = []
+    for item in gs["puzzle"]["items"]:
+        out.append(item if item["id"] in revealed else {**item, "name": None})
+    return out
+
+async def top10_timer(room_id: str):
+    try:
+        while True:
+            room = manager.rooms.get(room_id)
+            if not room or room.state != "playing":
+                return
+
+            if len(room.disconnect_tasks) > 0:
+                await asyncio.sleep(1)
+                continue
+
+            turn_end = room.game_state.get("turn_end_time", 0)
+            if time.time() >= turn_end:
+                active = room.game_state["active_player"]
+                log_match_event(room_id, "SYSTEM", "Top10: sure doldu.")
+                await top10_advance(room_id, active, was_correct=False)
+
+            await asyncio.sleep(1)
+    except asyncio.CancelledError:
+        pass
+
+async def top10_advance(room_id: str, user_id: str, was_correct: bool):
+    room = manager.rooms.get(room_id)
+    if not room or room.state != "playing": return
+    gs = room.game_state
+
+    if was_correct:
+        gs["consecutive_misses"] = 0
+    else:
+        gs["consecutive_misses"] += 1
+        if gs["consecutive_misses"] >= 2:
+            log_match_event(room_id, "SYSTEM", "Top10: deadlock, oyun erken bitiyor.")
+            await finish_top10(room_id, reason="deadlock")
+            return
+
+    p1, p2 = list(room.players.keys())
+    next_player = p2 if user_id == p1 else p1
+    gs["active_player"] = next_player
+    gs["turn_end_time"] = time.time() + 20
+
+    await room.broadcast({
+        "type": "game_update",
+        "action": "top10_turn_switch",
+        "active_player": next_player,
+        "turn_end_time": gs["turn_end_time"],
+        "consecutive_misses": gs["consecutive_misses"],
+    })
+
+async def finish_top10(room_id: str, reason: str):
+    room = manager.rooms.get(room_id)
+    if not room: return
+
+    room.state = "finished"
+    if "timer_task" in room.game_state:
+        room.game_state["timer_task"].cancel()
+
+    gs = room.game_state
+    p1, p2 = list(room.players.keys())
+    s1 = gs["score"].get(p1, 0)
+    s2 = gs["score"].get(p2, 0)
+
+    winner_id = None
+    if s1 > s2:
+        winner_id = p1
+    elif s2 > s1:
+        winner_id = p2
+
+    db = SessionLocal()
+    try:
+        if winner_id:
+            loser_id = p2 if winner_id == p1 else p1
+            award_winnings(db, int(winner_id), room.entry_fee * 2)
+            update_rating(db, int(winner_id), int(loser_id))
+            log_match_event(room_id, "SYSTEM", f"Top10 bitti ({reason}). Kazanan: {winner_id}")
+        else:
+            user1 = db.query(models.User).filter(models.User.id == int(p1)).first()
+            user2 = db.query(models.User).filter(models.User.id == int(p2)).first()
+            if user1: user1.chips += room.entry_fee
+            if user2: user2.chips += room.entry_fee
+            db.commit()
+            log_match_event(room_id, "SYSTEM", f"Top10 bitti ({reason}). Berabere.")
+
+        await room.broadcast({
+            "type": "game_over",
+            "reason": reason,
+            "winner_id": winner_id,
+            "score": gs["score"],
+            "items": gs["puzzle"]["items"],
         })
     finally:
         db.close()
@@ -1053,6 +1186,45 @@ async def websocket_endpoint(websocket: WebSocket, token: str = Query(...)):
                             await evaluate_mode31(room_id)
                         else:
                             await room.broadcast({"type": "player_ready", "user_id": user_id})
+
+            elif action == "top10_guess":
+                room_id = manager.user_rooms.get(user_id)
+                if room_id and room_id in manager.rooms:
+                    room = manager.rooms[room_id]
+                    if room.state == "playing" and room.game_mode == "top10":
+                        gs = room.game_state
+                        if gs.get("active_player") != user_id:
+                            continue
+
+                        try:
+                            guess_player_id = int(data.get("player_id"))
+                        except (TypeError, ValueError):
+                            continue
+
+                        revealed = set(gs["revealed"])
+                        match = next((item for item in gs["puzzle"]["items"] if item["id"] == guess_player_id and item["id"] not in revealed), None)
+
+                        if match:
+                            gs["revealed"].append(match["id"])
+                            gs["score"][user_id] = gs["score"].get(user_id, 0) + match["rank"]
+                            log_match_event(room_id, user_id, f"Top10: correct guess rank {match['rank']}")
+
+                            await room.broadcast({
+                                "type": "game_update",
+                                "action": "top10_correct",
+                                "user_id": user_id,
+                                "item": match,
+                                "score": gs["score"],
+                            })
+
+                            if len(gs["revealed"]) >= len(gs["puzzle"]["items"]):
+                                await finish_top10(room_id, reason="full")
+                                continue
+
+                            await top10_advance(room_id, user_id, was_correct=True)
+                        else:
+                            log_match_event(room_id, user_id, "Top10: wrong guess")
+                            await top10_advance(room_id, user_id, was_correct=False)
 
             elif action == "initials_pick_letter":
                 room_id = manager.user_rooms.get(user_id)

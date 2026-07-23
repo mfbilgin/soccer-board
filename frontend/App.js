@@ -32,6 +32,7 @@ import FlagElevenScreen from './screens/singleplayer/FlagElevenScreen';
 import MultiplayerFlagElevenScreen from './screens/multiplayer/MultiplayerFlagElevenScreen';
 import InitialsGuessScreen from './screens/singleplayer/InitialsGuessScreen';
 import MultiplayerInitialsGuessScreen from './screens/multiplayer/MultiplayerInitialsGuessScreen';
+import MultiplayerTop10Screen from './screens/multiplayer/MultiplayerTop10Screen';
 import TargetScoreResultScreen from './screens/singleplayer/TargetScoreResultScreen';
 import CustomTabBar from './components/CustomTabBar';
 import { COLORS, FONTS } from './theme';
@@ -126,6 +127,7 @@ export default function App() {
         <Stack.Screen name="MultiplayerFlagEleven" component={MultiplayerFlagElevenScreen} options={{ headerShown: false }} />
         <Stack.Screen name="InitialsGuess" component={InitialsGuessScreen} options={{ title: 'Harf Düellosu' }} />
         <Stack.Screen name="MultiplayerInitialsGuess" component={MultiplayerInitialsGuessScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="MultiplayerTop10" component={MultiplayerTop10Screen} options={{ headerShown: false }} />
         <Stack.Screen name="TargetScoreResult" component={TargetScoreResultScreen} options={{ title: 'Sonuç', headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
