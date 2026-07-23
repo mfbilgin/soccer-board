@@ -35,5 +35,5 @@ Online oyun doğası gereği bağlantı sorunları yaşanabilir.
 ## 6. Ödül Havuzu, Rake ve Beraberlik Kuralı
 - **Ödül havuzu:** Odaya giren tüm oyuncuların giriş ücretlerinin toplamıdır (Örn: 2 kişi 500'er Chip yatırdı = 1000 Chip havuz).
 - **Rake (sistem komisyonu):** Kazanan, havuzun **%90'ını** alır; **%10'u sistem kesintisidir**. Bu oran backend'de `services/economy.py` içindeki `RAKE_PERCENTAGE = 0.10` sabitiyle uygulanır (`award_winnings` fonksiyonu).
-- **Beraberlik / kazanan yok:** Hiçbir oyuncu kazanma koşulunu sağlamazsa (örn. süre dolduğunda ikisi de doğru cevap veremezse), oda ücretleri **iade edilir ve rake kesilmez** — bu kural oyuncu güvenini korumak için tasarlanmıştır. *(Tasarım Kararı — GDD §3, "Ortak Online Kurallar".)*
+- **Beraberlik / kazanan yok:** Hiçbir oyuncu kazanma koşulunu sağlamazsa (örn. süre dolduğunda ikisi de doğru cevap veremezse), oda ücretleri **iade edilir ve rake kesilmez** — bu kural oyuncu güvenini korumak için tasarlanmıştır.
 - **Zamanlayıcı otoritesi:** Tüm tur bazlı modlarda süre backend'de (sunucuda) tutulur; istemci yalnızca geri sayımı gösterir, süreyi kendisi belirlemez — bu, süre hile/manipülasyonunu engeller.

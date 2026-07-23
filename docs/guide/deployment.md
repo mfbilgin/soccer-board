@@ -12,8 +12,8 @@ gunicorn -k uvicorn.workers.UvicornWorker main:app --bind 0.0.0.0:8000 --workers
 4. PM2 veya Systemd ile servisi arka planda kalıcı hale getirin.
 5. `DATABASE_URL_V2` ortam değişkenini (production Postgres bağlantı dizesi) sunucu/deploy platformunun kendi ortam değişkeni deposunda tanımlayın — `backend/database.py` bu değişken olmadan başlamayı reddeder. **Bu değeri asla koda veya git'e commit etmeyin**, sadece `.env` (gitignore'da) veya platformun secret yönetiminde tutun.
 
-::: warning Bu bölüm doğrulanmadı
-Gerçek deploy platformunuz (VPS mi, bir PaaS mi) bu oturumda teyit edilmedi — yukarıdaki adımlar genel bir varsayım. Gerçek kurulumunuzu söylerseniz bu sayfayı buna göre güncelleyebiliriz.
+::: warning Doğrulanmamış varsayım
+Yukarıdaki adımlar genel bir VPS deploy senaryosunu varsayar; gerçek deploy platformu (VPS/PaaS) proje için ayrıca doğrulanmalı ve bu sayfa ona göre güncellenmelidir.
 :::
 
 ## Frontend (Expo) Deployment

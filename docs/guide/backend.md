@@ -7,7 +7,7 @@ Tüm HTTP endpoint'leri `routers` klasörü altında mantıksal olarak ayrılmı
 - **auth.py:** Kullanıcı kaydı, girişi (JWT tabanlı) işlemlerini barındırır.
 - **game.py** (`/api/game/tictactoe`): TicTacToe grid oluşturma (`/grid`), oyuncu tahminlerini doğrulama (`/guess`), pes etme (`/surrender`) ve oyuncu/takım arama (`/search`).
 - **target_score.py** (`/api/mode31`): "Kariyer İstatistiği Avı" (Target Score) modu — bulmaca üretme (`/generate`) ve tahmin doğrulama (`/validate-single`, `/validate`).
-- **pyramid.py** (`/api/game/pyramid`): Piramit sıralama modu için içerik üretimi (`/generate`).
+- **pyramid.py** (`/api/game/pyramid`): İsminin aksine [Piramit Sıralaması](/guide/game-modes/pyramid-ranking) değil, [Top 10 Tahmin](/guide/game-modes/top-10-guess) modu için içerik üretir (`/generate`).
 - **career_guess.py** (`/api/game/career-guess`): Transfer geçmişinden oyuncu tahmini — bulmaca üretme (`/generate`) ve doğrulama (`/verify`).
 - **social.py** (`/api/social`): Global liderlik tablosu ve arkadaşlık istekleri.
 - **multiplayer.py** (`/api/multiplayer` + `ws_router`): Oda/eşleştirme REST uçları ve WebSocket bağlantı noktası (`/api/multiplayer/ws`).
@@ -25,4 +25,4 @@ Multiplayer tarafı tamamen WebSockets üzerine kuruludur. `multiplayer.py` içi
 4. **Ekonomi Entegrasyonu:** `services/economy.py` üzerinden giriş ücreti kesme (`deduct_entry_fee`), kazanana ödül dağıtma (`award_winnings`, %10 rake ile) ve bağlantı kopmasında hükmen mağlubiyet (`process_forfeit`).
 
 ## Ekonomi Servisi (services/economy.py)
-Chip/XP/Rating hesaplamalarını merkezi olarak yönetir: `deduct_entry_fee`, `award_winnings`, `add_xp` (Level formülü: `XP = 100 * level^1.5`) ve `update_rating` (standart Elo, K=32). Detaylar için [Gems & Chips](/guide/systems/economy-gems-chips) ve [Rank/ELO](/guide/systems/ranking-elo).
+Chip/XP/Rating hesaplamalarını merkezi olarak yönetir: `deduct_entry_fee`, `award_winnings`, `add_xp_and_check_level` (Level formülü: `XP = 100 * level^1.5`) ve `update_rating` (standart Elo, K=32). Detaylar için [Gems & Chips](/guide/systems/economy-gems-chips) ve [Rank/ELO](/guide/systems/ranking-elo).

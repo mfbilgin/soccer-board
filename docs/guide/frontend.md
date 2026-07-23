@@ -12,5 +12,5 @@ Kullanıcı arayüzü ve deneyimi React Native (Expo) kullanılarak geliştirilm
 ## Temel Kütüphaneler
 - **Axios:** API haberleşmesi.
 - **React Navigation:** Ekranlar arası geçiş.
-- **Socket.io-client:** Multiplayer mod için canlı soket bağlantısı.
+- **Native WebSocket** (`frontend/services/SocketService.js`, `new WebSocket(...)`): Multiplayer mod için canlı soket bağlantısı — socket.io-client değil, tarayıcı/React Native'in yerleşik `WebSocket` API'si kullanılır; backend tarafında da (`routers/multiplayer.py`) FastAPI'nin native `WebSocket` desteği kullanılır, socket.io protokolü değil.
 - **Expo Blur:** Oyun içi "Glassmorphism" ve modern bulanık tasarım efektleri için.

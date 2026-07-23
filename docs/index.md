@@ -15,7 +15,7 @@ hero:
 
 features:
   - title: "Rich Backend Architecture"
-    details: "Built on FastAPI, SQLite and WebSockets, delivering real-time multiplayer and high-performance querying."
+    details: "Built on FastAPI, PostgreSQL and native WebSockets, delivering real-time multiplayer and high-performance querying."
   - title: "Massive Football Database"
     details: "Contains over 47,000 players with an automated Delta Update scraper pulling live from Transfermarkt API."
   - title: "Multiple Game Modes"
