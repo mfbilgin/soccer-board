@@ -9,12 +9,15 @@ Tüm HTTP endpoint'leri `routers` klasörü altında mantıksal olarak ayrılmı
 - **target_score.py** (`/api/mode31`): "Kariyer İstatistiği Avı" (Target Score) modu — bulmaca üretme (`/generate`) ve tahmin doğrulama (`/validate-single`, `/validate`).
 - **pyramid.py** (`/api/game/pyramid`): İsminin aksine [Piramit Sıralaması](/guide/game-modes/pyramid-ranking) değil, [Top 10 Tahmin](/guide/game-modes/top-10-guess) modu için içerik üretir (`/generate`).
 - **career_guess.py** (`/api/game/career-guess`): Transfer geçmişinden oyuncu tahmini — bulmaca üretme (`/generate`) ve doğrulama (`/verify`).
+- **extreme_squad.py** (`/api/games/extreme-squad`): En genç/en uzun kadroyu kurma modu — `/generate`, `/validate-single`, `/validate`.
+- **flag_eleven.py** (`/api/game/flag-eleven`): Bayraklardan takım tahmini — `/generate`, `/verify` (bkz. [Flag Eleven](/guide/game-modes/flag-eleven)).
+- **initials_guess.py** (`/api/game/initials-guess`): Baş/son harften oyuncu tahmini — `/letter-pools`, `/verify`, `/reveal`.
 - **social.py** (`/api/social`): Global liderlik tablosu ve arkadaşlık istekleri.
-- **multiplayer.py** (`/api/multiplayer` + `ws_router`): Oda/eşleştirme REST uçları ve WebSocket bağlantı noktası (`/api/multiplayer/ws`).
+- **multiplayer.py** (`/api/multiplayer` + `ws_router`): Oda/eşleştirme REST uçları ve WebSocket bağlantı noktası (`/api/multiplayer/ws`). Chain Reaction ve Find Two'nun oyun motorları ayrı router dosyaları değil, doğrudan içe aktarılan modüllerdir (`chain_reaction.py`, `find_two.py`) — yalnızca WebSocket üzerinden, `multiplayer.py` içinden çağrılırlar, kendi HTTP router'ları yoktur.
 - Ayrıca `main.py` içinde doğrudan tanımlı `/api/players/search` (genel oyuncu arama) endpoint'i vardır.
 
 ::: info Kapsam notu
-Şu an yalnızca **TicTacToe, Target Score, Pyramid ve Career Guess** modlarının hem backend router'ı hem frontend ekranı mevcut. Diğer modlar (bkz. [Game Modes](/guide/game-modes/stats-target)) tasarım dokümanı aşamasında, henüz kodlanmadı.
+[Game Modes](/guide/game-modes/stats-target) listesindeki **10 modun tamamı** artık kodlanmış ve çalışıyor durumda (hem backend router'ı hem frontend ekranı mevcut). Her modun kendi doküman sayfasındaki "Durum" satırı güncel kalma durumunu gösterir.
 :::
 
 ## Gerçek Zamanlı Eşleşme (routers/multiplayer.py + socket_manager.py)

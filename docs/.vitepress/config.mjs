@@ -7,7 +7,8 @@ export default defineConfig({
     nav: [
       { text: 'Home', link: '/' },
       { text: 'Game Modes', link: '/guide/game-modes/tictactoe-4x4' },
-      { text: 'Economy & Systems', link: '/guide/systems/economy-gems-chips' }
+      { text: 'Economy & Systems', link: '/guide/systems/economy-gems-chips' },
+      { text: 'Project Notes', link: '/architecture/overview' }
     ],
 
     sidebar: [
@@ -46,6 +47,39 @@ export default defineConfig({
           { text: 'Level & Avatar Sistemi', link: '/guide/systems/level-system-avatars' },
           { text: 'Rank (ELO) Sistemi', link: '/guide/systems/ranking-elo' },
           { text: 'Sosyal & Liderlik Tabloları', link: '/guide/systems/social-leaderboards' }
+        ]
+      },
+      {
+        text: 'Proje Notları',
+        collapsed: true,
+        items: [
+          {
+            text: 'Mimari (Klasör Yapısı / Katmanlar)',
+            items: [
+              { text: 'Genel Bakış', link: '/architecture/overview' },
+              { text: 'Frontend', link: '/architecture/frontend' },
+              { text: 'Backend', link: '/architecture/backend' },
+              { text: 'Database', link: '/architecture/database' }
+            ]
+          },
+          {
+            text: 'Kararlar (ADR)',
+            items: [
+              { text: '001 - Kimlik Doğrulama', link: '/decisions/001-auth' },
+              { text: '002 - State Yönetimi', link: '/decisions/002-state-management' },
+              { text: '003 - API Şekli', link: '/decisions/003-api' }
+            ]
+          },
+          {
+            text: 'Özellikler',
+            items: [
+              { text: 'Authentication', link: '/features/authentication' },
+              { text: 'Profile', link: '/features/profile' },
+              { text: 'Notifications', link: '/features/notifications' }
+            ]
+          },
+          { text: 'Roadmap', link: '/roadmap' },
+          { text: 'Current Task', link: '/current-task' }
         ]
       }
     ],

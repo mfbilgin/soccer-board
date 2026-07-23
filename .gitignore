@@ -12,6 +12,10 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# VitePress build output
+docs/.vitepress/dist/
+docs/.vitepress/cache/
+
 # Databases
 *.db
 *.sqlite
