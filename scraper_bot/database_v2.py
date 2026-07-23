@@ -2,8 +2,13 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
+from dotenv import load_dotenv
 
-# V2 Veritabanı
+load_dotenv()
+
+# V2 Veritabani. Guvenli yerel test icin varsayilan sqlite dosyasi kullanilir.
+# Production Postgres'e yazmak icin DATABASE_URL_V2'yi .env dosyasinda prod
+# connection string'ine set et (bkz. backend/.env.example).
 SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL_V2", "sqlite:///./football_trivia_v2.db")
 
 # SQLite için check_same_thread gerekirken, Postgres için gerekmez.

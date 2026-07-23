@@ -3,11 +3,17 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
 import os
+from dotenv import load_dotenv
 
-DATABASE_URL = os.environ.get(
-    "DATABASE_URL_V2", 
-    "postgresql://doadmin:AVNS_SNm-zDEGXzrviF6ZS31@trivia-database-v2-do-user-18505351-0.i.db.ondigitalocean.com:25060/defaultdb?sslmode=require"
-)
+load_dotenv()
+
+DATABASE_URL = os.environ.get("DATABASE_URL_V2")
+if not DATABASE_URL:
+    raise RuntimeError(
+        "DATABASE_URL_V2 ortam degiskeni tanimli degil. "
+        "backend/.env.example dosyasina bakip yerel .env dosyani olustur "
+        "(prod calisiyorsa deploy platformunda da bu degiskenin tanimli oldugundan emin ol)."
+    )
 
 # SQLite uses check_same_thread, Postgres doesn't
 connect_args = {}
