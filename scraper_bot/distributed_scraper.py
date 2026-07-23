@@ -39,7 +39,9 @@ def fetch_club_profile(api_id):
     if not resp:
         return None
     data = resp.get('data', {}) or {}
-    if not data:
+    if not data or data.get('isSpecialClub'):
+        # isSpecialClub: TMAPI'nin "Retired"/"Career break" gibi ozel sentinel
+        # girisleri - gercek kulup degil, mevcut (yerellestirilmis) ismi ez me.
         return None
     base = data.get('baseDetails', {}) or {}
     country_id = base.get('countryId')

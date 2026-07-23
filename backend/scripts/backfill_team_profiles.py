@@ -57,7 +57,9 @@ def fetch_profile(api_id):
         return None
 
     data = payload.get('data', {}) or {}
-    if not data:
+    if not data or data.get('isSpecialClub'):
+        # isSpecialClub: TMAPI'nin "Retired"/"Career break" gibi ozel sentinel
+        # girisleri - gercek kulup degil, mevcut (yerellestirilmis) ismi ezme.
         return None
     base = data.get('baseDetails', {}) or {}
     country_id = base.get('countryId')
