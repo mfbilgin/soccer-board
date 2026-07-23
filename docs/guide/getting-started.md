@@ -17,7 +17,13 @@ Gerekli paketleri yükleyin:
 pip install -r requirements.txt
 ```
 
-Veritabanını başlatın (Eğer `.db` dosyası yoksa):
+`.env` dosyanı oluştur (bkz. `.env.example`) ve `DATABASE_URL_V2` değişkenini doldur — bu değişken olmadan `database.py` uygulamayı başlatmaz:
+```bash
+cp .env.example .env
+# .env icini ac ve DATABASE_URL_V2'yi doldur (yerel SQLite icin sqlite:///./football_trivia.db yeterli)
+```
+
+Veritabanını başlatın (Eğer `.db` dosyası yoksa, yalnızca yerel SQLite ile çalışıyorsan gerekir):
 ```bash
 python init_db.py
 ```

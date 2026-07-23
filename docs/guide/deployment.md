@@ -10,7 +10,11 @@ Projenin tam anlamıyla dış dünyaya açılması için gerekli adımlar.
 gunicorn -k uvicorn.workers.UvicornWorker main:app --bind 0.0.0.0:8000 --workers 4
 ```
 4. PM2 veya Systemd ile servisi arka planda kalıcı hale getirin.
-5. Veritabanı ve `.env` (Secret Keys) güvenliğini sağlayın.
+5. `DATABASE_URL_V2` ortam değişkenini (production Postgres bağlantı dizesi) sunucu/deploy platformunun kendi ortam değişkeni deposunda tanımlayın — `backend/database.py` bu değişken olmadan başlamayı reddeder. **Bu değeri asla koda veya git'e commit etmeyin**, sadece `.env` (gitignore'da) veya platformun secret yönetiminde tutun.
+
+::: warning Bu bölüm doğrulanmadı
+Gerçek deploy platformunuz (VPS mi, bir PaaS mi) bu oturumda teyit edilmedi — yukarıdaki adımlar genel bir varsayım. Gerçek kurulumunuzu söylerseniz bu sayfayı buna göre güncelleyebiliriz.
+:::
 
 ## Frontend (Expo) Deployment
 React Native uygulamasını marketlere göndermek (veya test etmek) için Expo EAS kullanılır.
