@@ -56,7 +56,7 @@ def ensure_cache(db: Session):
             "name": t.short_name if t.short_name else t.name,
             "country": t.country
         })
-        TEAM_CHOICES.append(t.name)
+        TEAM_CHOICES.append(t.short_name if t.short_name else t.name)
         
     CACHE_LOADED = True
 # --------------------------

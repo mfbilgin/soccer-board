@@ -1,5 +1,7 @@
 import argparse
+import csv
 import logging
+import os
 import sys
 import requests
 import time
@@ -17,20 +19,74 @@ HEADERS = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/
 TEAM_CACHE = {}
 COMP_CACHE = {}
 
+def _load_country_map():
+    path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'backend', 'data', 'countries.csv')
+    m = {}
+    try:
+        with open(path, encoding='utf-8') as f:
+            for row in csv.DictReader(f):
+                m[int(row['country_id'])] = row['country_name']
+    except Exception:
+        pass
+    return m
+
+COUNTRY_BY_ID = _load_country_map()
+PLACEHOLDER_NAME_RE = re.compile(r'^Team \d+$')
+
+def fetch_club_profile(api_id):
+    """TMAPI'den bir kulubun kanonik name/short_name/country/type bilgisini ceker. Basarisiz olursa None doner."""
+    resp = fetch_json(f"{TMAPI_BASE}/club/{api_id}")
+    if not resp:
+        return None
+    data = resp.get('data', {}) or {}
+    if not data:
+        return None
+    base = data.get('baseDetails', {}) or {}
+    country_id = base.get('countryId')
+    return {
+        "name": data.get('name'),
+        "short_name": base.get('shortName') or base.get('abbreviation'),
+        "country": COUNTRY_BY_ID.get(country_id) if country_id else None,
+        "type": 'national' if base.get('isNationalTeam') else 'club',
+    }
+
 def get_or_create_team(db, api_id, name, is_national=False):
     if not api_id:
         return None
-        
+
     if api_id in TEAM_CACHE:
         return TEAM_CACHE[api_id]
-        
+
     team = db.query(Team).filter_by(api_id=api_id).first()
+    needs_profile = (team is None) or (not team.name) or PLACEHOLDER_NAME_RE.match(team.name or '') or (team.country is None)
+
+    profile = fetch_club_profile(api_id) if needs_profile else None
+
     if not team:
         t_type = 'national' if is_national else 'club'
-        team = Team(api_id=api_id, name=name or f"Team {api_id}", type=t_type)
+        if profile:
+            team = Team(
+                api_id=api_id,
+                name=profile['name'] or name or f"Team {api_id}",
+                short_name=profile['short_name'],
+                country=profile['country'],
+                type=profile['type'] or t_type,
+            )
+        else:
+            team = Team(api_id=api_id, name=name or f"Team {api_id}", type=t_type)
         db.add(team)
         db.flush() # ID'yi almak için flush
-    
+    elif profile:
+        # Mevcut kayit bozuktu (placeholder isim / eksik ulke) - yerinde onar.
+        if profile['name']:
+            team.name = profile['name']
+        if profile['short_name']:
+            team.short_name = profile['short_name']
+        if profile['country']:
+            team.country = profile['country']
+        if profile['type']:
+            team.type = profile['type']
+
     TEAM_CACHE[api_id] = team.id
     return team.id
 

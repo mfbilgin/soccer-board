@@ -22,7 +22,7 @@ STATS = ['goals', 'assists', 'appearances']
 TEAMS = [
     'Real Madrid', 'Barcelona', 'Atlético de Madrid', 'Bayern Munich', 'Arsenal', 
     'Paris Saint-Germain', 'Inter', 'Manchester City', 'Liverpool', 'Chelsea', 
-    'Manchester United', 'AC Milan', 'Fenerbahçe', 'Juventus', 'Galatasaray', 'Beşiktaş'
+    'Manchester United', 'Milan', 'Fenerbahçe', 'Juventus', 'Galatasaray', 'Beşiktaş'
 ]
 
 @router.get("/generate")
@@ -116,7 +116,7 @@ def generate_pyramid(db: Session = Depends(get_db)):
             
         team = db.query(models.Team).filter(
             (models.Team.name.ilike(f"%{team_name}%")) | (models.Team.short_name.ilike(f"%{team_name}%"))
-        ).first()
+        ).order_by(func.length(models.Team.name)).first()
         
         if not team:
              raise HTTPException(status_code=500, detail=f"Takım bulunamadı: {team_name}")

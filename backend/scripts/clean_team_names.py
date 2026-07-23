@@ -1,10 +1,16 @@
 """
 Takim isimlerini (teams.short_name) temizler.
 
-- Genel kurumsal ekleri (S.A.D., F.C., A.S., Spor Kulubu, U19 vb.) regex ile siler.
-- Populer kulupler icin elle belirlenmis kisa isimleri (Real Madrid, Fenerbahce,
-  PSG, Besiktas...) her seferinde uzerine yazar.
-- Idempotent'tir: tum takimlari her calistiginda yeniden isler, sadece degisen
+- short_name'i hala NULL olan takimlarda, genel kurumsal ekleri (S.A.D., F.C.,
+  A.S., Spor Kulubu, U19 vb.) regex ile silip sonucu short_name'e yazar.
+- short_name zaten doluysa DOKUNMAZ: gercek kaynagi backend/scripts/
+  backfill_team_profiles.py (TMAPI'nin kendi resmi short_name'i) ya da scraper'in
+  kendisidir; bu script yalnizca o kaynaklarin kacirdigi satirlar icin bir
+  yedek/fallback'tir. Eskiden burada bulunan ELITE_CLUB_OVERRIDES (LIKE '%X%'
+  ile eslesen ~30 kulup listesi) kaldirildi, cunku alakasiz/farkli ulkelerden
+  ayni alt-stringi paylasan kulupleri de ayni short_name'e cevirip birbirinden
+  ayirt edilemez hale getiriyordu (orn. "Arsenal Tula" -> "Arsenal").
+- Idempotent'tir: sadece short_name IS NULL olan satirlari isler ve degisen
   satirlari commit'ler. Bu yuzden guvenle tekrar tekrar calistirilabilir.
 
 Hangi veritabanina yazacagi backend/.env icindeki DATABASE_URL_V2'ye baglidir
@@ -42,46 +48,6 @@ SUFFIX_PATTERNS = [
     r'\bSport Lisboa e\b',
 ]
 
-# Populer kulupler icin elle belirlenmis kisa isimler. name LIKE pattern -> short_name.
-# Regex temizliginden SONRA uygulanir, boylece her zaman kazanir.
-ELITE_CLUB_OVERRIDES = [
-    ("%Internazionale Milano%", "Inter"),
-    ("%Associazione Calcio Milan%", "Milan"),
-    ("%Real Madrid%", "Real Madrid"),
-    ("%Barcelona%", "Barcelona"),
-    ("Galatasaray%", "Galatasaray"),
-    ("Fenerbah%", "Fenerbahçe"),
-    ("Be%ikta%", "Beşiktaş"),
-    ("Manchester United%", "Manchester United"),
-    ("Manchester City%", "Manchester City"),
-    ("Arsenal%", "Arsenal"),
-    ("Chelsea%", "Chelsea"),
-    ("Liverpool%", "Liverpool"),
-    ("Juventus%", "Juventus"),
-    ("%Bayern M%nchen%", "Bayern Munich"),
-    ("Bayern Munich", "Bayern Munich"),
-    ("%Paris Saint%Germain%", "PSG"),
-    ("%Atl%tico%Madrid%", "Atlético Madrid"),
-    ("Borussia Dortmund", "Borussia Dortmund"),
-    ("Tottenham Hotspur%", "Tottenham Hotspur"),
-    ("Societ% Sportiva Calcio Napoli", "Napoli"),
-    ("Napoli", "Napoli"),
-    ("Associazione Sportiva Roma", "Roma"),
-    ("AS Roma", "Roma"),
-    ("Aston Villa%", "Aston Villa"),
-    ("Newcastle United%", "Newcastle United"),
-    ("Bayer 04 Leverkusen", "Bayer Leverkusen"),
-    ("RB Leipzig", "RB Leipzig"),
-    ("Olympique Lyonnais", "Lyon"),
-    ("Olympique de Marseille", "Marseille"),
-    ("Sport Lisboa e Benfica", "Benfica"),
-    ("Futebol Clube do Porto", "Porto"),
-    ("Sporting Clube de Portugal", "Sporting CP"),
-    ("Amsterdamsche Football Club Ajax", "Ajax"),
-    ("PSV Eindhoven", "PSV"),
-]
-
-
 def clean_name(name):
     cleaned = name
     for pattern in SUFFIX_PATTERNS:
@@ -97,16 +63,12 @@ def clean_name(name):
 def run(batch_size=500):
     db = SessionLocal()
     try:
-        teams = db.query(Team.id, Team.name, Team.short_name).all()
-        print(f"{len(teams)} takim taraniyor...")
+        # Yalnizca short_name'i hala bos olan takimlari isle - zaten dolu olanlar
+        # (TMAPI backfill'inden veya scraper'dan gelen) asla ezilmez.
+        teams = db.query(Team.id, Team.name).filter(Team.short_name.is_(None)).all()
+        print(f"{len(teams)} takim taraniyor (short_name IS NULL)...")
 
-        updates = []
-        for team_id, name, current_short in teams:
-            new_short = clean_name(name)
-            if new_short != current_short:
-                updates.append({"id": team_id, "s": new_short})
-
-        print(f"{len(updates)} takim guncellenecek. Elite override'lar uygulaniyor...")
+        updates = [{"id": team_id, "s": clean_name(name)} for team_id, name in teams]
 
         for i in range(0, len(updates), batch_size):
             batch = updates[i:i + batch_size]
@@ -114,16 +76,6 @@ def run(batch_size=500):
                 db.execute(text("UPDATE teams SET short_name = :s WHERE id = :id"), row)
             db.commit()
             print(f"  batch {i // batch_size + 1}/{(len(updates) - 1) // batch_size + 1} yazildi")
-
-        override_count = 0
-        for pattern, short_name in ELITE_CLUB_OVERRIDES:
-            result = db.execute(
-                text("UPDATE teams SET short_name = :s WHERE name LIKE :p"),
-                {"s": short_name, "p": pattern},
-            )
-            override_count += result.rowcount or 0
-        db.commit()
-        print(f"{override_count} takim elite override ile guncellendi.")
 
         remaining_null = db.execute(
             text("SELECT COUNT(*) FROM teams WHERE short_name IS NULL")
