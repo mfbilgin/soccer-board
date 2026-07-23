@@ -30,4 +30,10 @@ Online oyun doğası gereği bağlantı sorunları yaşanabilir.
 - Bir oyuncu oyunu kapatırsa, uygulamayı arka plana atarsa veya internet bağlantısı koparsa oyun **anında duraklatılır**.
 - Oyunda kalan kişinin ekranında *"Rakibin bağlantısı koptu, yeniden bağlanması bekleniyor..."* şeklinde bir ibare ve geri sayım belirir.
 - Kopan oyuncuya oyuna dönmesi için **30-45 saniye** arası bir süre tanınır.
-- Bu süre içinde yeniden bağlanmazsa, kopan oyuncu **Hükmen Mağlup (Forfeit)** sayılır. Oyunda kalan oyuncu odayı galip olarak tamamlar ve giriş ücretine tekabül eden ödülü kazanır.
+- Bu süre içinde yeniden bağlanmazsa, kopan oyuncu **Hükmen Mağlup (Forfeit)** sayılır. Oyunda kalan oyuncu odayı galip olarak tamamlar ve giriş ücretine tekabül eden ödülü kazanır. Backend tarafında bu akış `services/economy.py`'deki `process_forfeit` fonksiyonuyla yürütülür.
+
+## 6. Ödül Havuzu, Rake ve Beraberlik Kuralı
+- **Ödül havuzu:** Odaya giren tüm oyuncuların giriş ücretlerinin toplamıdır (Örn: 2 kişi 500'er Chip yatırdı = 1000 Chip havuz).
+- **Rake (sistem komisyonu):** Kazanan, havuzun **%90'ını** alır; **%10'u sistem kesintisidir**. Bu oran backend'de `services/economy.py` içindeki `RAKE_PERCENTAGE = 0.10` sabitiyle uygulanır (`award_winnings` fonksiyonu).
+- **Beraberlik / kazanan yok:** Hiçbir oyuncu kazanma koşulunu sağlamazsa (örn. süre dolduğunda ikisi de doğru cevap veremezse), oda ücretleri **iade edilir ve rake kesilmez** — bu kural oyuncu güvenini korumak için tasarlanmıştır. *(Tasarım Kararı — GDD §3, "Ortak Online Kurallar".)*
+- **Zamanlayıcı otoritesi:** Tüm tur bazlı modlarda süre backend'de (sunucuda) tutulur; istemci yalnızca geri sayımı gösterir, süreyi kendisi belirlemez — bu, süre hile/manipülasyonunu engeller.
