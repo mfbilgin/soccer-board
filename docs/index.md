@@ -11,7 +11,7 @@ hero:
       link: "/guide/getting-started"
     - theme: alt
       text: "View Game Modes"
-      link: "/guide/game-modes/tictactoe"
+      link: "/guide/game-modes/tictactoe-4x4"
 
 features:
   - title: "Rich Backend Architecture"

@@ -35,7 +35,8 @@ export default defineConfig({
           { text: '7. Piramit Sıralaması', link: '/guide/game-modes/pyramid-ranking' },
           { text: '8. Baş Harflerinden Bul', link: '/guide/game-modes/initials-guess' },
           { text: '9. Bayraklarla İlk 11', link: '/guide/game-modes/flag-eleven' },
-          { text: '10. Oyuncular-Takımlar Örgüsü', link: '/guide/game-modes/chain-reaction' }
+          { text: '10. Oyuncular-Takımlar Örgüsü', link: '/guide/game-modes/chain-reaction' },
+          { text: 'Ortak Multiplayer Sistemi', link: '/guide/game-modes/multiplayer-core' }
         ]
       },
       {
@@ -43,7 +44,8 @@ export default defineConfig({
         items: [
           { text: 'Gems & Chips Ekonomisi', link: '/guide/systems/economy-gems-chips' },
           { text: 'Level & Avatar Sistemi', link: '/guide/systems/level-system-avatars' },
-          { text: 'Rank (ELO) Sistemi', link: '/guide/systems/ranking-elo' }
+          { text: 'Rank (ELO) Sistemi', link: '/guide/systems/ranking-elo' },
+          { text: 'Sosyal & Liderlik Tabloları', link: '/guide/systems/social-leaderboards' }
         ]
       }
     ],

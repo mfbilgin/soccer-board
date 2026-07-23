@@ -3,14 +3,36 @@
 Oyuncuların profillerini geliştirdikleri, kişiselleştirdikleri ve yeteneklerini sergiledikleri gelişim mekanikleri.
 
 ## 1. XP ve Level Sistemi
-Oyuncular, oynadıkları her (Online veya Offline) oyun modundan maç sonunda bir miktar XP (Deneyim Puanı) kazanırlar ve belirli eşikleri aşarak Seviye (Level) atlarlar.
 
-**XP Kazanım Mantığı:**
-- **Online Mod:** Doğrudan kazanma/kaybetme üzerine kuruludur. Kazanan oyuncu çok yüksek bir XP alırken, kaybeden çok daha az (teselli) XP'si alır.
-- **Offline Mod:** Burada bir rakip olmadığı için XP tamamen oyuncunun "oyun içi performansına" göre hesaplanır. Bölümü ne kadar kısa sürede bitirdiği, kaç yanlış hak kullandığı veya ne kadar zorlu (nadir) bir tahminde bulunduğu XP miktarını belirler.
-- **2x Boost:** Kullanıcı dilerse elindeki "Gems"leri harcayarak, oynadığı maçlardan gelen XP miktarına süreli (Örn: 2 Saatlik) 2x Çarpan Takviyesi uygulayabilir.
+::: danger Kodda iki farklı, birbiriyle uyumsuz leveling mantığı var
+- **`services/economy.py`'deki `add_xp()`** fonksiyonu, XP'yi kümülatif toplam kabul edip `level = (toplam_xp / 100) ^ (1/1.5)` formülüyle hesaplıyor — ama bu fonksiyon **kod tabanının hiçbir yerinden çağrılmıyor**, tamamen ölü kod.
+- **Gerçekte kullanılan (aktif) mantık `routers/target_score.py`'nin `validate` endpoint'inde inline yazılı:** XP bir "seviye barı" gibi davranır — `required_xp = 100 * level^1.5` doldukça `xp -= required_xp` ile sıfırlanır ve `level += 1` olur (birden fazla seviye tek seferde atlanabilir). **Kesin/kanonik formül budur.**
+- **`routers/game.py`'deki TicTacToe `surrender` endpoint'i** ise `current_user.xp += xp_gained` ile XP'yi doğrudan artırır ama **hiç level-up kontrolü yapmaz** — TicTacToe'dan kazanılan XP asla seviye atlatmaz (gerçek bir eksiklik/bug).
+
+**Kesin düzeltme:** `target_score.py`'deki inline leveling bloğu (`required_xp` döngüsü) `services/economy.py` içine `add_xp_and_check_level(db, user, xp_amount)` adıyla tek bir fonksiyon olarak taşınmalı; hem `target_score.py` hem `game.py`'nin `surrender` endpoint'i bu ortak fonksiyonu çağırmalı. Eski, kullanılmayan `add_xp()` formülü silinmelidir.
+:::
+
+Oyuncular, oynadıkları her (online veya offline) oyun modundan maç sonunda bir miktar XP kazanırlar ve `required_xp = 100 * level^1.5` eşiğini aşarak seviye atlarlar.
+
+**XP Kazanım Mantığı (mod bazlı, kesin — bkz. ilgili mod sayfaları):**
+- [Stats Target](/guide/game-modes/stats-target) ve [Extreme Squad](/guide/game-modes/extreme-squad): sapma yüzdesine göre 5 kademeli XP (25/25/15/10/5).
+- [TicTacToe](/guide/game-modes/tictactoe-4x4): doğru hücre başına 10 XP (singleplayer `surrender` üzerinden; yukarıdaki bug nedeniyle şu an level-up tetiklemiyor).
+- **Online Mod (genel kural):** Kazanan/kaybeden ayrımına dayalı XP miktarı şu an **kodlanmamıştır** — sadece Chip/Rating değişir (`award_winnings`, `update_rating`); online maçlardan XP kazanımı henüz backend'e eklenmemiştir. Eklenecekse en basit çözüm: kazanana sabit **50 XP**, kaybedene sabit **10 XP**, aynı `add_xp_and_check_level` fonksiyonu üzerinden `evaluate_*` fonksiyonlarının içine eklenerek.
+
+**2x Boost:** **(Kodlanmadı)** — Gems karşılığında XP'ye süreli çarpan uygulama mekanizması yok, bkz. [Gems & Chips](/guide/systems/economy-gems-chips).
 
 ## 2. Avatar ve Özelleştirme
-Kullanıcıların kendilerini temsil eden interaktif profilleri vardır.
-- **Market Alışverişi:** Oyuncular biriktirdikleri Gems veya Chips'leri kullanarak avatarlarına özel formalar, taraftar atkıları, kramponlar, şapkalar ve yüz boyaları satın alabilirler.
-- **Seviye Ödülleri:** Market dışında, oyuncular hesaplarında **her 10 veya 15 level atladığında** sistem onlara rastgele basit bir avatar öğesi (Örn: Basit bir bileklik veya şapka) hediye eder.
+
+::: danger Kodlanmadı
+`models.py`'de avatar/envanter/market ile ilgili hiçbir tablo yok (`User` tablosunda bir `avatar_id` veya benzeri alan bile yok). Aşağıdaki spec doğrudan uygulanabilir şekilde kesinleştirilmiştir.
+:::
+
+- **Market Alışverişi:** Oyuncular Gems veya Chips karşılığında avatarlarına özel formalar, atkılar, kramponlar, şapkalar satın alabilir.
+- **Seviye Ödülleri:** Oyuncular her **10 seviyede bir** (10, 20, 30...) sistemden otomatik olarak rastgele basit bir avatar öğesi kazanır (15 değil, kesin olarak 10 — tek bir sabit aralık, karışıklığı önlemek için).
+
+**Backend İhtiyaçları (uygulanacak şema):**
+- `avatar_items` tablosu: `id`, `name`, `slot` (`forma`/`atki`/`kramponlar`/`sapka`), `price_gems`, `price_chips`, `rarity`.
+- `user_inventory` tablosu: `id`, `user_id` (FK), `item_id` (FK), `acquired_at`, `source` (`'market'`/`'level_reward'`).
+- `users` tablosuna `equipped_avatar_item_ids` (JSON veya ayrı `user_equipped_items` tablosu) eklenmesi, o an giyili olan öğeleri tutmak için.
+- `POST /api/shop/buy` → `{"item_id": 5, "currency": "gems"|"chips"}`; bakiye kontrolü + `user_inventory`'ye ekleme.
+- Level-up sırasında (yukarıdaki ortak `add_xp_and_check_level` fonksiyonu içinde) `if new_level % 10 == 0: grant_random_item(db, user)` çağrısı.

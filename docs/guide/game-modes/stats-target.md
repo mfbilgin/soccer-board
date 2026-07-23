@@ -1,56 +1,69 @@
-# İstatistik Hedefleri Modu (Stats Target)
+# İstatistik Hedefleri Modu (Stats Target / "Kariyer İstatistiği Avı")
 
-Bu mod, kullanıcının belirli bir ligde ve kısıtlı sayıda oyuncuyla verilen istatistik hedefini tutturmaya çalıştığı bir futbol bulmacasıdır. **Amaç hedefi aşmak değil, hedefe tam olarak (ya da olabildiğince yakın) ulaşmaktır.**
+Kullanıcının, sistemin verdiği sabit sayıda futbolcuyla, belirli bir kapsamda (lig veya milli takım) verilen bir istatistik hedefine **olabildiğince yakınlaşmaya** çalıştığı bir moddur. **Amaç hedefi aşmak değil, hedefe tam olarak (ya da olabildiğince yakın) ulaşmaktır.**
+
+::: danger Online mod şu an production'da çalışmıyor
+`backend/routers/multiplayer.py` içindeki `initialize_game_state` (satır 65) ve `evaluate_mode31` (satır 265), `routers/target_score.py`'nin eski adı olan **`routers.mode_3_1`**'i import ediyor — bu modül artık yok (dosya `fbbc292` commit'inde `target_score.py` olarak yeniden adlandırıldı, import güncellenmedi). Sonuç: bir oda `mode31` (Target Score) modunda başlamaya çalıştığında sunucu `ModuleNotFoundError` ile çöküyor, oda hiç başlamıyor.
+
+**Kesin düzeltme:** `multiplayer.py`'deki iki satırda `from routers.mode_3_1 import ...` ifadesini `from routers.target_score import ...` ile değiştirmek yeterlidir; fonksiyon isimleri (`generate_puzzle`, `validate_submission`) değişmedi.
+
+Tek oyunculu (Singleplayer) mod bu bug'dan etkilenmez, `routers/target_score.py`'yi doğrudan REST üzerinden kullanır ve çalışır durumdadır.
+:::
 
 ## Oyun Amacı
-Oyuncu, sistem tarafından verilen **Lig (lg)** bazında, yine sistemin belirlediği **Oyuncu Sayısı (pa)** hakkını kullanarak, hedeflenen **İstatistik (tar)** için istenen **Hedef Sayıya (ta)** en yakın sonucu elde etmeye çalışır.
+Oyuncu, sistem tarafından verilen **Lig (`league`)** bazında, yine sistemin belirlediği **Oyuncu Sayısı (`player_count`)** hakkını kullanarak, hedeflenen **İstatistik (`metric`)** için istenen **Hedef Sayıya (`target`)** en yakın sonucu elde etmeye çalışır.
 
-## Soru Kısıtları ve Algoritması
+## Bulmaca Üretim Algoritması (`GET /api/mode31/generate`)
+Backend, bulmacayı **gerçek oyuncu verisi sorgulamadan**, tamamen rastgele sayı matematiğiyle üretir (bkz. `round_target`/`generate_puzzle` — bilinçli bir tasarım tercihi, `b7f7982` commit'inde DB sorgusundan bu yönteme geçildi):
 
-Sistemin kullanıcının karşısına çıkaracağı bulmaca aşağıdaki kesin kurallara göre oluşturulur:
+1. **Lig (`league`)** 8 seçenekten rastgele seçilir: `GB1` (Premier League), `ES1` (La Liga), `IT1` (Serie A), `L1` (Bundesliga), `FR1` (Ligue 1), `TR1` (Süper Lig), `INT` (Milli Takımlar), `ALL` (Tüm Ligler).
+2. **Oyuncu Sayısı (`player_count`)** yalnızca **3** ya da **5** olabilir.
+3. **Metrik (`metric`):**
+   - Lig `INT` ise: `goals`, `assists`, `caps` arasından.
+   - Diğer tüm ligler için: `goals`, `assists`, `appearances`, `yellow_cards`, `red_cards` arasından. (`minutes_played` artık bir seçenek **değildir** — kaldırıldı.)
+4. **Hedef değer (`target`):** Her metrik için sabit bir `(min, max)` aralığı vardır (örn. gol: 30-150, asist: 20-80, maç: 100-300, sarı kart: 20-70, kırmızı kart: 1-5, milli takım cap: 30-90). Sistem, `player_count` kadar rastgele sayıyı bu aralıktan çekip toplar, sonucu metriğe göre yukarı yuvarlar (dakika hariç 10'un katına, dakika varsa — ki artık yok — 100'ün katına).
+5. `puzzle_id` (UUID) üretilir ama backend'de doğrulama için kullanılmaz (frontend'in kendi state takibi içindir).
 
-1. **İzin Verilen Ligler (lg):** Yalnızca Avrupa'nın 5 büyük ligi, Türkiye Süper Lig (TR1) ve Milli Maçlar arasından seçilir.
-2. **Hedef Futbolcu Sayısı (pa):** Yalnızca **3** ya da **5** olabilir.
-3. **Verilen Görev (tar):** Aşağıdaki metriklerden biri olabilir:
-   - Gol Sayısı (`goals`)
-   - Maç Sayısı (`appearances`)
-   - Toplam Oynanan Dakika (`minutes_played`)
-   - Asist Sayısı (`assists`)
-   - Sarı Kart Sayısı (`yellow_cards`)
-   - Kırmızı Kart Sayısı (`red_cards`)
-4. **Hedef Miktarı (ta) Belirleme Algoritması:**
-   - Backend sistemi, seçilen kriterleri tam olarak sağlayan `pa` (3 veya 5) sayıda rastgele aktif/emekli süperstar oyuncu seçer.
-   - Bu oyuncuların `tar` cinsinden istatistiklerini toplar.
-   - Çıkan sonucu yukarı doğru düz (ondalık) bir sayıya yuvarlar. (Örn: Çıkan toplam 271 ise, hedef `ta = 300` olarak belirlenir).
+::: tip Solvability notu
+Hedef gerçek oyunculardan değil rastgele matematikten geldiği için, **tam isabet (distance=0) garanti edilmez** — bu modun doğası "hedefe mümkün olduğunca yaklaşmak" olduğundan, bu kasıtlı ve kabul edilebilir bir tasarımdır.
+:::
 
-## Puanlama ve Kazanma Koşulları (Kritik)
+## Oyuncu Doğrulama ("Dummy Engeli") — `POST /api/mode31/validate-single`
+Kullanıcı bir kutuya oyuncu seçtiğinde frontend bu endpoint'i çağırır. `payload: {league, metric, player_id}`.
+- `league == "INT"`: oyuncunun `player_national_stats` toplamı (`caps`) sıfırdan büyük değilse `{"valid": false, "message": "Bu oyuncu milli takımda oynamamış."}` döner ve kutuya yerleşmez.
+- Diğer ligler: oyuncunun o ligdeki (`league == "ALL"` ise tüm liglerdeki) `player_club_stats.appearances` toplamı sıfırdan büyük değilse aynı şekilde reddedilir (`"Bu oyuncu bu ligde oynamamış."`).
+- Geçerliyse `{"valid": true, "value": <toplam>}` döner ve frontend oyuncuyu kutuya yerleştirir.
 
-Oyunun temel zorluğu hedefi geçmekte değil, **nokta atışı hedefe yaklaşmaktadır**. Seçtiğiniz oyuncuların toplamı hedeften az ya da çok olabilir, önemli olan aradaki matematiksel farktır.
+Bu sayede hem kullanıcının bilmeden geçersiz bir seçim yapıp cezalandırılması engellenir, hem de "N oyuncu" şartının daha az geçerli oyuncuyla bypass edilmesi mümkün olmaz.
 
-**Singleplayer (Tek Oyunculu) Puanlaması:**
-Kullanıcı tüm kutuları doldurup tahmini gönderdiğinde çıkan sonuç hedefe (ta) göre yüzdelik olarak değerlendirilir:
-- **%1 ± Yakınlık:** Kusursuz tahmin! **25 XP** kazandırır.
-- **%10 ± Yakınlık:** Başarılı tahmin. **10 XP** kazandırır.
-- **Daha Fazla Sapma:** Zayıf tahmin. Sadece teselli puanı olan **5 XP** kazandırır.
+## Puanlama — `POST /api/mode31/validate`
+Tüm kutular doldurulup gönderildiğinde backend, her oyuncunun ilgili metrikteki toplamını tekrar (güvenlik için sunucu tarafında) hesaplar, `total_sum`'ı bulur ve `distance = |target - total_sum|`, `deviation_percent = distance / max(1, target) * 100` üzerinden şu kesin kademeleri uygular:
 
-**Multiplayer (Online) Akışı ve Kazanma Koşulu:**
-Online mod, iki oyuncunun aynı anda aynı bulmacayı çözdüğü, sürenin ve heyecanın ön planda olduğu rekabetçi bir yapıdadır (WebSockets ile anlık çalışır).
-1. **Oda ve Eşleşme:** İki oyuncu eşleşir ve her ikisinin ekranına aynı anda aynı bulmaca (Aynı hedef, aynı lig) düşer.
-2. **Süre (Timer):** Oyunun 60 veya 90 saniyelik katı bir süresi vardır. Süre baskısı oyuncuları hızlı düşünmeye iter.
-3. **Rakibi Görme:** Oyuncular rakibin kutularının dolduğunu anlık olarak görür (Örn: "Rakip 1. kutuyu doldurdu!"), ancak hangi oyuncuyu seçtiğini **göremez**. Bu durum büyük bir heyecan ve panik yaratır.
-4. **Kilitleme (Bitir):** Bir oyuncu seçimlerini bitirip "Bitir" butonuna bastığında tahminini kilitler. Diğer oyuncu süresi bitene kadar (veya o da Bitir diyene kadar) seçime devam edebilir.
-5. **Showdown (Sonuç Ekranı):** İki oyuncu da kilitlediğinde veya süre bittiğinde ekran ikiye bölünür. Oyuncuların seçtiği futbolcular ve toplam skorları aynı anda açığa çıkar.
-6. **Kazanma ve Eşitlik (Tie-Breaker):** Toplam skoru hedefe (ta) **en yakın olan** maçı kazanır. Eğer her iki oyuncu da hedefe *tamamen aynı uzaklıktaysa*, tahmini **ilk kilitleyen (Süreyi daha hızlı kullanan)** oyuncu galip sayılır. Boş kutu bırakan oyuncu direkt kaybeder.
+| Sapma | XP | Tier |
+|---|---|---|
+| `distance == 0` (tam isabet) | **25 XP** | 0 |
+| `deviation_percent ≤ 5%` | **25 XP** | 1 |
+| `deviation_percent ≤ 15%` | **15 XP** | 2 |
+| `deviation_percent ≤ 25%` | **10 XP** | 3 |
+| `deviation_percent > 25%` | **5 XP** | 4 |
 
-## Kısıtlamalar ve Uç Durumlar (Edge Cases)
-Bu oyun modunda hile yapılmasını veya oyunun mantığının kırılmasını önlemek için aşağıdaki kurallar uygulanır:
-1. **Mükerrer Oyuncu Engeli:** Bir oyuncu birden fazla kutuya yerleştirilemez.
-2. **Geçersiz Oyuncu Uyarısı (Dummy Engeli):** Kullanıcının o ligde hiç oynamamış veya istenen istatistikte değeri "0" olan bir oyuncuyu (Örn: Hedef Premier Lig iken kutulardan birine Neymar'ı seçmesi) seçmesi durumunda sistem oyuncuyu kutuya yerleştirmez. Ekranda "Bu oyuncu bu ligde hiç oynamadı, başka bir tahmin yapın." şeklinde bir uyarı çıkar. Bu sayede hem kullanıcının bilmeden ceza alması engellenir, hem de "3 oyuncu" şartını 1 oyuncuyla bypass etme açığı tamamen kapatılmış olur.
-3. **Arama Çubuğu Şeffaflığı:** Arama kısmı (Autocomplete) filtreleme yapmaz; dünyadaki tüm oyuncuları getirir. Kullanıcı kimin o ligde oynadığını kendisi bilmek zorundadır.
+XP eklendikten sonra backend aynı istekte level-up kontrolü de yapar: `required_xp = 100 * level^1.5`; `xp >= required_xp` olduğu sürece `level += 1` ve `xp -= required_xp` döngüsü çalışır (birden fazla seviye birden atlanabilir).
+
+## Online Mod (WebSocket, `game_mode: "mode31"`)
+1. **Oda ve Eşleşme:** İki oyuncu eşleşir (bkz. [Multiplayer Core](/guide/game-modes/multiplayer-core)); backend `generate_puzzle()` ile **her iki oyuncuya da aynı bulmacayı** üretir ve `puzzle_ready` mesajıyla yayınlar.
+2. **Süre:** Sunucu tarafında **90 saniyelik** kesin bir sayaç çalışır (bağlantı kopmalarında duraklar). Süre dolduğunda otomatik değerlendirme tetiklenir.
+3. **Gönderim (kilitleme):** Bir oyuncu seçimlerini bitirip gönderdiğinde bu, o oyuncu için kilitlenir; rakip süresi bitene kadar (veya o da gönderene kadar) seçime devam edebilir. İki oyuncu da gönderdiğinde zamanlayıcı task'i iptal edilir ve değerlendirme hemen yapılır.
+4. **Eksik gönderim = otomatik diskalifiye:** Bir oyuncu `player_count` kadar oyuncu seçmeden süre biterse, o oyuncunun mesafesi `999999` (sonsuz) kabul edilir — otomatik kaybeder.
+5. **Kazanma ve Eşitlik:** Toplam skoru hedefe **en yakın olan** (küçük `distance`) kazanır. Mesafeler eşitse (ve ikisi de gerçekten gönderim yapmışsa, iki taraf da diskalifiye değilse), **ilk gönderen** (`timestamp` küçük olan) kazanır. İki taraf da eksik/diskalifiyeyse el **berabere** biter ve oda ücreti iade edilir (rake alınmaz, bkz. [Multiplayer Core](/guide/game-modes/multiplayer-core)).
+
+## Kısıtlamalar ve Uç Durumlar
+1. **Mükerrer Oyuncu Engeli:** Bir oyuncu birden fazla kutuya yerleştirilemez (frontend, zaten seçilmiş `player_id`'leri arama sonuçlarından hariç tutar).
+2. **Geçersiz Oyuncu Uyarısı:** Yukarıda anlatılan "Dummy Engeli" ile korunur.
+3. **Arama Çubuğu Şeffaflığı:** `SearchModal` filtreleme yapmaz, dünyadaki tüm oyuncuları getirir; kullanıcı kimin o ligde oynadığını `validate-single` geri bildiriminden öğrenir.
 
 ## Oynanış Akışı (UI/UX)
-Mevcut kod altyapımız (`TargetScoreScreen.js`) üzerinden ilerlenecektir:
-1. **Ekran Yerleşimi:** Oyuncu modu seçtiğinde sayfanın en üstünde seçilmiş lig ve alt kısmında hedef skor yazar (Örn: "Premier League - Toplam 300 Gol").
-2. **Oyuncu Barları (Slotlar):** Hedefin hemen altında `pa` (3 veya 5) kadar **boş oyuncu barı** yer alır.
-3. **Arama ve Seçim:** Oyuncu boş bir bara tıkladığında standart `SearchModal` (Arama Kutusu) açılır. Kullanıcı klavyeden oyuncu ismini yazmaya başladığında mevcut sistemdeki gibi futbolcular listelenir.
-4. **Doğrulama ve Sonuç:** Tüm kutular (`pa` adet) doldurulduktan sonra "Bitir" butonuna basılır. Sistem, API (`/validate`) üzerinden seçilen oyuncuların geçerliliğini ve gerçek skorlarını toplar, hedefe olan yakınlık yüzdesine göre kazanılan XP'yi hesaplayıp ekranda gösterir.
+`frontend/screens/singleplayer/TargetScoreScreen.js` (tek oyunculu) ve `frontend/screens/multiplayer/MultiplayerTargetScoreScreen.js` (online) üzerinden ilerler:
+1. Sayfanın üstünde seçilmiş lig ve hedef skor yazar (Örn: "Premier League (İngiltere) - Toplam 300 Gol").
+2. Hedefin altında `player_count` (3 veya 5) kadar boş oyuncu barı yer alır.
+3. Oyuncu boş bir bara tıkladığında `SearchModal` açılır; seçim yapıldığında `validate-single` çağrılır, geçersizse hata mesajı gösterilir ve kutu boş kalır.
+4. Tüm kutular doldurulduktan sonra "Bitir" butonuna basılır, `validate` çağrılır ve sonuç ekranında (`TargetScoreResultScreen.js`) hedefe yakınlık, kazanılan XP ve (varsa) level-up animasyonu gösterilir.
