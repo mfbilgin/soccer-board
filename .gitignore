@@ -21,6 +21,7 @@ backend/data/
 
 # Logs
 match_logs/
+backend/*_run.log
 
 # OS Files
 .DS_Store
