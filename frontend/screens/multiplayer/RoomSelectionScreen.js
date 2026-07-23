@@ -58,6 +58,8 @@ export default function RoomSelectionScreen({ route, navigation }) {
             navigation.navigate('MultiplayerTargetScore', { tier });
         } else if (modeId === 'tictactoe_1' || modeId === 'tictactoe_2') {
             navigation.navigate('MultiplayerTicTacToe', { tier, modeId });
+        } else if (modeId === 'chain_reaction') {
+            navigation.navigate('ChainReaction', { tier });
         } else {
             Alert.alert("Yakında", "Bu mod henüz aktif değil.");
         }

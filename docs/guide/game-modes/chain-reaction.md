@@ -2,7 +2,9 @@
 
 **2 ila 6 kişinin** aynı lobide oynayabildiği, "Kelime Zinciri" oyununun futbol dünyasına uyarlanmış, hızlı ve eğlenceli bir eleme modudur.
 
-**Durum:** Kodlanmadı. Yalnızca online (gerçek zamanlı çok oyunculu) olarak tasarlanmıştır. Bu sayfa tam bir uygulama şartnamesidir. [Multiplayer Core](/guide/game-modes/multiplayer-core)'daki 1v1 eşleştirme/kazanan-kaybeden mantığı bu N-kişilik moda uygun değildir — aşağıdaki spec kendi bağımsız lobi/skor mantığını tanımlar.
+**Durum:** Kodlandı ve çalışıyor. Yalnızca online (gerçek zamanlı çok oyunculu) olarak tasarlanmıştır. [Multiplayer Core](/guide/game-modes/multiplayer-core)'daki 1v1 eşleştirme/kazanan-kaybeden mantığı bu N-kişilik moda uygun olmadığı için kendi bağımsız lobi/skor mantığı vardır (`socket_manager.py`'deki `join_chain_lobby`, `routers/multiplayer.py`'deki `chain_*` fonksiyonları, `chain_reaction.py`'deki `ChainReactionEngine`).
+
+Kod karşılığı: `backend/socket_manager.py` (N-kişilik lobi), `backend/routers/multiplayer.py` (`chain_lobby_countdown`, `start_chain_reaction_game`, `chain_answer` WS action'ı), `backend/chain_reaction.py` (zincir motoru — `tictactoe.py`'nin takım/oyuncu önbelleğini yeniden kullanır), `frontend/screens/multiplayer/ChainReactionScreen.js`.
 
 ## Oyun Akışı
 Oyun sırayla ilerler. Zincir her zaman "Oyuncu → Takım → Oyuncu → Takım" şeklinde devam etmek zorundadır.

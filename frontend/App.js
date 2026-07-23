@@ -24,6 +24,7 @@ import RoomSelectionScreen from './screens/multiplayer/RoomSelectionScreen';
 import TargetScoreScreen from './screens/singleplayer/TargetScoreScreen';
 import MultiplayerTargetScoreScreen from './screens/multiplayer/MultiplayerTargetScoreScreen';
 import MultiplayerTicTacToeScreen from './screens/multiplayer/MultiplayerTicTacToeScreen';
+import ChainReactionScreen from './screens/multiplayer/ChainReactionScreen';
 import TargetScoreResultScreen from './screens/singleplayer/TargetScoreResultScreen';
 import CustomTabBar from './components/CustomTabBar';
 import { COLORS, FONTS } from './theme';
@@ -110,6 +111,7 @@ export default function App() {
         <Stack.Screen name="TargetScore" component={TargetScoreScreen} options={{ title: 'Hedef Tutturma' }} />
         <Stack.Screen name="MultiplayerTargetScore" component={MultiplayerTargetScoreScreen} options={{ headerShown: false }} />
         <Stack.Screen name="MultiplayerTicTacToe" component={MultiplayerTicTacToeScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="ChainReaction" component={ChainReactionScreen} options={{ headerShown: false }} />
         <Stack.Screen name="TargetScoreResult" component={TargetScoreResultScreen} options={{ title: 'Sonuç', headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>

@@ -30,6 +30,8 @@ class ConnectionManager:
         self.user_rooms: Dict[str, str] = {}
         # queues: (game_mode, entry_fee) -> [ {user_id, username, rating, websocket} ]
         self.queues: Dict[tuple, List[dict]] = {}
+        # chain_lobby_rooms: entry_fee (tier) -> room_id of the currently-open (waiting) N-kişilik lobi
+        self.chain_lobby_rooms: Dict[int, str] = {}
 
     async def connect(self, websocket: WebSocket, user_id: str):
         await websocket.accept()
@@ -72,9 +74,16 @@ class ConnectionManager:
             await asyncio.sleep(15) # 15 seconds grace period
         except asyncio.CancelledError:
             return # User reconnected
-            
+
         room = self.rooms.get(room_id)
         # If this task wasn't cancelled, the user didn't reconnect.
+        if room and room.state == "playing" and room.game_mode == "chain_reaction":
+            if user_id in room.disconnect_tasks:
+                del room.disconnect_tasks[user_id]
+            from routers.multiplayer import chain_eliminate
+            await chain_eliminate(room_id, user_id, reason="disconnected")
+            return
+
         if room and room.state == "playing":
             room.state = "finished"
             winner_id = [pid for pid in room.player_data.keys() if pid != user_id]
@@ -158,18 +167,60 @@ class ConnectionManager:
         if room_id in self.rooms:
             room = self.rooms[room_id]
             if user_id in room.player_data:
+                if room.state == "waiting":
+                    from routers.multiplayer import refund_fee_safe
+                    refund_fee_safe(int(user_id), room.entry_fee)
+
                 del room.player_data[user_id]
                 if user_id in room.players:
                     del room.players[user_id]
                 if user_id in self.user_rooms:
                     del self.user_rooms[user_id]
-                
+
                 if len(room.player_data) == 0:
+                    if "lobby_timer_task" in room.game_state:
+                        room.game_state["lobby_timer_task"].cancel()
+                    for tier, rid in list(self.chain_lobby_rooms.items()):
+                        if rid == room_id:
+                            del self.chain_lobby_rooms[tier]
                     del self.rooms[room_id]
                 else:
                     asyncio.create_task(room.broadcast({
                         "type": "player_left",
-                        "user_id": user_id
+                        "user_id": user_id,
+                        "count": len(room.player_data)
                     }))
+
+    async def join_chain_lobby(self, user_id: str, username: str, rating: int, tier: int):
+        room_id = self.chain_lobby_rooms.get(tier)
+        room = self.rooms.get(room_id) if room_id else None
+
+        if not room or room.state != "waiting" or len(room.players) >= 6:
+            room_id = str(uuid.uuid4())
+            room = Room(room_id, "chain_reaction", tier)
+            self.rooms[room_id] = room
+            self.chain_lobby_rooms[tier] = room_id
+
+        room.players[user_id] = self.active_connections[user_id]
+        room.player_data[user_id] = {"username": username, "rating": rating}
+        self.user_rooms[user_id] = room_id
+
+        await room.broadcast({
+            "type": "lobby_update",
+            "room_id": room_id,
+            "players": room.player_data,
+            "count": len(room.players)
+        })
+
+        from routers.multiplayer import start_chain_reaction_game, chain_lobby_countdown
+
+        if len(room.players) >= 6:
+            if "lobby_timer_task" in room.game_state:
+                room.game_state["lobby_timer_task"].cancel()
+            if self.chain_lobby_rooms.get(tier) == room_id:
+                del self.chain_lobby_rooms[tier]
+            await start_chain_reaction_game(room_id)
+        elif len(room.players) == 2:
+            room.game_state["lobby_timer_task"] = asyncio.create_task(chain_lobby_countdown(room_id, tier))
 
 manager = ConnectionManager()

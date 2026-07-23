@@ -8,6 +8,7 @@ from services.economy import deduct_entry_fee, award_winnings, update_rating
 import os
 import json
 import time
+import random
 
 router = APIRouter(prefix="/api/multiplayer", tags=["Multiplayer"])
 ws_router = APIRouter()
@@ -44,6 +45,16 @@ def deduct_fee_safe(user_id: int, fee: int) -> bool:
     db = SessionLocal()
     try:
         return deduct_entry_fee(db, user_id, fee)
+    finally:
+        db.close()
+
+def refund_fee_safe(user_id: int, fee: int):
+    db = SessionLocal()
+    try:
+        user = db.query(models.User).filter(models.User.id == user_id).first()
+        if user:
+            user.chips += fee
+            db.commit()
     finally:
         db.close()
 
@@ -329,6 +340,145 @@ async def evaluate_mode31(room_id: str):
         if room_id in manager.rooms:
             del manager.rooms[room_id]
 
+async def chain_lobby_countdown(room_id: str, tier: int):
+    try:
+        await asyncio.sleep(20)
+    except asyncio.CancelledError:
+        return
+
+    room = manager.rooms.get(room_id)
+    if not room or room.state != "waiting" or len(room.players) < 2:
+        return
+
+    if manager.chain_lobby_rooms.get(tier) == room_id:
+        del manager.chain_lobby_rooms[tier]
+    await start_chain_reaction_game(room_id)
+
+async def start_chain_reaction_game(room_id: str):
+    room = manager.rooms.get(room_id)
+    if not room or room.state != "waiting":
+        return
+    room.state = "playing"
+
+    db = SessionLocal()
+    try:
+        from chain_reaction import ChainReactionEngine
+        engine = ChainReactionEngine(db)
+        start = engine.pick_start_player()
+
+        turn_order = list(room.players.keys())
+        random.shuffle(turn_order)
+
+        room.game_state = {
+            "turn_order": turn_order,
+            "active_idx": 0,
+            "chain": [{"type": "player", "id": start["id"], "name": start["name"]}],
+            "used_players": {start["id"]},
+            "used_teams": set(),
+            "eliminated": [],
+            "turn_end_time": time.time() + 15,
+        }
+        room.game_state["timer_task"] = asyncio.create_task(chain_reaction_timer(room_id))
+
+        await room.broadcast({
+            "type": "game_update",
+            "action": "chain_ready",
+            "start_entity": start,
+            "turn_order": turn_order,
+            "active_player": turn_order[0],
+            "turn_end_time": room.game_state["turn_end_time"],
+        })
+    finally:
+        db.close()
+
+async def chain_reaction_timer(room_id: str):
+    try:
+        while True:
+            room = manager.rooms.get(room_id)
+            if not room or room.state != "playing":
+                return
+
+            if len(room.disconnect_tasks) > 0:
+                await asyncio.sleep(1)
+                continue
+
+            turn_end = room.game_state.get("turn_end_time", 0)
+            if time.time() >= turn_end:
+                active = room.game_state["turn_order"][room.game_state["active_idx"]]
+                log_match_event(room_id, "SYSTEM", f"Chain: {active} suresi doldu, elendi.")
+                await chain_eliminate(room_id, active, reason="timeout")
+
+            await asyncio.sleep(1)
+    except asyncio.CancelledError:
+        pass
+
+async def chain_advance_turn(room_id: str):
+    room = manager.rooms.get(room_id)
+    if not room: return
+    gs = room.game_state
+    order = gs["turn_order"]
+    n = len(order)
+    idx = gs["active_idx"]
+    for _ in range(n):
+        idx = (idx + 1) % n
+        if order[idx] not in gs["eliminated"]:
+            break
+    gs["active_idx"] = idx
+    gs["turn_end_time"] = time.time() + 15
+
+    await room.broadcast({
+        "type": "game_update",
+        "action": "chain_turn_switch",
+        "active_player": order[idx],
+        "turn_end_time": gs["turn_end_time"],
+    })
+
+async def chain_eliminate(room_id: str, user_id: str, reason: str):
+    room = manager.rooms.get(room_id)
+    if not room or room.state != "playing": return
+
+    gs = room.game_state
+    if user_id not in gs["eliminated"]:
+        gs["eliminated"].append(user_id)
+
+    await room.broadcast({"type": "game_update", "action": "chain_player_eliminated", "user_id": user_id, "reason": reason})
+
+    remaining = [u for u in gs["turn_order"] if u not in gs["eliminated"]]
+    if len(remaining) <= 1:
+        winner = remaining[0] if remaining else None
+        await finish_chain_reaction(room_id, winner)
+        return
+
+    await chain_advance_turn(room_id)
+
+async def finish_chain_reaction(room_id: str, winner_id):
+    room = manager.rooms.get(room_id)
+    if not room: return
+    room.state = "finished"
+    if "timer_task" in room.game_state:
+        room.game_state["timer_task"].cancel()
+
+    total_pool = room.entry_fee * len(room.player_data)
+    db = SessionLocal()
+    try:
+        if winner_id:
+            log_match_event(room_id, "SYSTEM", f"Chain reaction bitti. Kazanan: {winner_id}")
+            award_winnings(db, int(winner_id), total_pool)
+
+        await room.broadcast({
+            "type": "game_over",
+            "winner_id": winner_id,
+            "chain": room.game_state["chain"],
+            "eliminated_order": room.game_state["eliminated"],
+        })
+    finally:
+        db.close()
+        for pid in list(room.player_data.keys()):
+            if pid in manager.user_rooms:
+                del manager.user_rooms[pid]
+        if room_id in manager.rooms:
+            del manager.rooms[room_id]
+
 @ws_router.websocket("/api/multiplayer/ws")
 async def websocket_endpoint(websocket: WebSocket, token: str = Query(...)):
     print(f"[WS] Connection attempt... token: {token[:15]}...")
@@ -380,7 +530,91 @@ async def websocket_endpoint(websocket: WebSocket, token: str = Query(...)):
                     finally:
                         db.close()
                     await websocket.send_json({"type": "queue_left"})
-                
+
+            elif action == "join_chain_lobby":
+                tier = int(data.get("tier"))
+
+                user_fresh = await get_current_user_ws(token)
+                if user_fresh and user_fresh.chips >= tier:
+                    if deduct_fee_safe(user_fresh.id, tier):
+                        await manager.join_chain_lobby(user_id, user_fresh.username, user_fresh.rating, tier)
+                    else:
+                        await websocket.send_json({"type": "error", "message": "Bakiyeniz kesilemedi"})
+                else:
+                    await websocket.send_json({"type": "error", "message": "Yeterli Chip yok"})
+
+            elif action == "leave_chain_lobby":
+                room_id = manager.user_rooms.get(user_id)
+                if room_id and room_id in manager.rooms and manager.rooms[room_id].state == "waiting":
+                    manager.leave_room(user_id, room_id)
+                    await websocket.send_json({"type": "lobby_left"})
+
+            elif action == "chain_answer":
+                room_id = manager.user_rooms.get(user_id)
+                if room_id and room_id in manager.rooms:
+                    room = manager.rooms[room_id]
+                    if room.state == "playing" and room.game_mode == "chain_reaction":
+                        gs = room.game_state
+                        active = gs["turn_order"][gs["active_idx"]]
+                        if active != user_id:
+                            continue
+
+                        entity_type = data.get("entity_type")
+                        if entity_type not in ("player", "team"):
+                            continue
+                        try:
+                            entity_id = int(data.get("entity_id"))
+                        except (TypeError, ValueError):
+                            continue
+
+                        last_node = gs["chain"][-1]
+                        expected_type = "team" if last_node["type"] == "player" else "player"
+                        if entity_type != expected_type:
+                            continue
+
+                        db = SessionLocal()
+                        try:
+                            from chain_reaction import ChainReactionEngine
+                            engine = ChainReactionEngine(db)
+                            valid = engine.validate_answer(last_node["type"], last_node["id"], entity_id, gs["used_players"], gs["used_teams"])
+
+                            if not valid:
+                                await websocket.send_json({"type": "chain_wrong_answer"})
+                                continue
+
+                            name = engine.get_entity_name(entity_type, entity_id)
+                            if entity_type == "player":
+                                gs["used_players"].add(entity_id)
+                            else:
+                                gs["used_teams"].add(entity_id)
+                            gs["chain"].append({"type": entity_type, "id": entity_id, "name": name})
+                            log_match_event(room_id, user_id, f"Chain answer accepted: {name}")
+
+                            continuations = engine.get_valid_continuations(entity_type, entity_id, gs["used_players"], gs["used_teams"])
+                            if not continuations:
+                                new_start = engine.pick_start_player(exclude=gs["used_players"])
+                                gs["used_players"] = {new_start["id"]}
+                                gs["used_teams"] = set()
+                                gs["chain"] = [{"type": "player", "id": new_start["id"], "name": new_start["name"]}]
+                                log_match_event(room_id, "SYSTEM", "Zincir tikandi, yeni zincir basliyor.")
+                                await room.broadcast({
+                                    "type": "game_update",
+                                    "action": "chain_reset",
+                                    "message": "Zincir tıkandı, yeni zincir başlıyor!",
+                                    "start_entity": new_start,
+                                })
+                            else:
+                                await room.broadcast({
+                                    "type": "game_update",
+                                    "action": "chain_correct_answer",
+                                    "user_id": user_id,
+                                    "entity": {"type": entity_type, "id": entity_id, "name": name},
+                                })
+                        finally:
+                            db.close()
+
+                        await chain_advance_turn(room_id)
+
             elif action == "submit_guess":
                 import time
                 room_id = manager.user_rooms.get(user_id)
