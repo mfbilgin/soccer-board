@@ -64,6 +64,8 @@ export default function RoomSelectionScreen({ route, navigation }) {
             navigation.navigate('MultiplayerExtremeSquad', { tier });
         } else if (modeId === 'find_two') {
             navigation.navigate('FindTwo', { tier });
+        } else if (modeId === 'flag_eleven') {
+            navigation.navigate('MultiplayerFlagEleven', { tier });
         } else {
             Alert.alert("Yakında", "Bu mod henüz aktif değil.");
         }

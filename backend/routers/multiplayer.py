@@ -109,6 +109,27 @@ async def initialize_game_state(room_id: str):
         finally:
             db.close()
 
+    elif room.game_mode == "flag_eleven":
+        db = SessionLocal()
+        try:
+            from routers.flag_eleven import generate_puzzle
+            puzzle = generate_puzzle(db)
+            room.game_state = {
+                "puzzle": puzzle,
+                "wrong_counts": {pid: 0 for pid in room.players},
+                "turn_end_time": time.time() + 30,
+            }
+            room.game_state["timer_task"] = asyncio.create_task(flag_eleven_timer(room_id))
+            await room.broadcast({
+                "type": "game_update",
+                "action": "flag_eleven_ready",
+                "puzzle_id": puzzle["puzzle_id"],
+                "positions": puzzle["positions"],
+                "turn_end_time": room.game_state["turn_end_time"],
+            })
+        finally:
+            db.close()
+
     elif room.game_mode == "extreme_squad":
         db = SessionLocal()
         try:
@@ -270,6 +291,64 @@ async def evaluate_tictactoe_winner(room_id: str, reason: str, explicit_winner: 
                 p1: {"message": f"{sum(1 for c in board.values() if c['owner'] == p1)} Hücre"},
                 p2: {"message": f"{sum(1 for c in board.values() if c['owner'] == p2)} Hücre"}
             }
+        })
+    finally:
+        db.close()
+        for pid in list(room.players.keys()):
+            if pid in manager.user_rooms:
+                del manager.user_rooms[pid]
+        if room_id in manager.rooms:
+            del manager.rooms[room_id]
+
+async def flag_eleven_timer(room_id: str):
+    try:
+        while True:
+            room = manager.rooms.get(room_id)
+            if not room or room.state != "playing":
+                return
+
+            if len(room.disconnect_tasks) > 0:
+                await asyncio.sleep(1)
+                continue
+
+            turn_end = room.game_state.get("turn_end_time", 0)
+            if time.time() >= turn_end:
+                log_match_event(room_id, "SYSTEM", "Flag Eleven: sure doldu, berabere.")
+                await finish_flag_eleven(room_id, winner_id=None)
+                return
+
+            await asyncio.sleep(1)
+    except asyncio.CancelledError:
+        pass
+
+async def finish_flag_eleven(room_id: str, winner_id: str = None):
+    room = manager.rooms.get(room_id)
+    if not room or room.state != "playing": return
+
+    room.state = "finished"
+    if "timer_task" in room.game_state:
+        room.game_state["timer_task"].cancel()
+
+    team_name = room.game_state["puzzle"]["team_name"]
+
+    db = SessionLocal()
+    try:
+        if winner_id:
+            loser_id = next(pid for pid in room.players.keys() if pid != winner_id)
+            log_match_event(room_id, "SYSTEM", f"Flag Eleven bitti. Kazanan: {winner_id}")
+            award_winnings(db, int(winner_id), room.entry_fee * 2)
+            update_rating(db, int(winner_id), int(loser_id))
+        else:
+            for pid in room.players.keys():
+                user = db.query(models.User).filter(models.User.id == int(pid)).first()
+                if user:
+                    user.chips += room.entry_fee
+            db.commit()
+
+        await room.broadcast({
+            "type": "game_over",
+            "winner_id": winner_id,
+            "team_name": team_name,
         })
     finally:
         db.close()
@@ -851,6 +930,30 @@ async def websocket_endpoint(websocket: WebSocket, token: str = Query(...)):
                             await evaluate_mode31(room_id)
                         else:
                             await room.broadcast({"type": "player_ready", "user_id": user_id})
+
+            elif action == "flag_eleven_guess":
+                room_id = manager.user_rooms.get(user_id)
+                if room_id and room_id in manager.rooms:
+                    room = manager.rooms[room_id]
+                    if room.game_mode == "flag_eleven" and room.state == "playing":
+                        gs = room.game_state
+                        if gs["wrong_counts"].get(user_id, 0) >= 3:
+                            continue
+
+                        from routers.flag_eleven import _is_match
+                        team_guess = data.get("team_guess", "")
+                        correct = _is_match(team_guess, gs["puzzle"]["team_name"])
+
+                        if correct:
+                            log_match_event(room_id, user_id, f"Flag Eleven: correct guess ({team_guess}).")
+                            await finish_flag_eleven(room_id, winner_id=user_id)
+                        else:
+                            gs["wrong_counts"][user_id] = gs["wrong_counts"].get(user_id, 0) + 1
+                            await websocket.send_json({"type": "flag_eleven_wrong", "wrong_count": gs["wrong_counts"][user_id]})
+
+                            if all(c >= 3 for c in gs["wrong_counts"].values()):
+                                log_match_event(room_id, "SYSTEM", "Flag Eleven: iki taraf da hakkini tuketti, berabere.")
+                                await finish_flag_eleven(room_id, winner_id=None)
 
             elif action == "find_two_guess":
                 room_id = manager.user_rooms.get(user_id)

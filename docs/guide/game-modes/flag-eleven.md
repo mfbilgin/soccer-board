@@ -2,7 +2,9 @@
 
 Görsel hafıza ve coğrafya bilgisinin futbolla harmanlandığı, oyunculara sadece "uyruklar" üzerinden ipucu verilen bir moddur.
 
-**Durum:** Kodlanmadı. Bu sayfa tam bir uygulama şartnamesidir.
+**Durum:** Kodlandı ve çalışıyor (hem singleplayer hem online).
+
+Kod karşılığı: `backend/routers/flag_eleven.py` (`generate_puzzle`, `/generate`, `/verify` — cevabı sunucu tarafında `PUZZLES` bellek önbelleğinde tutar, yanıtta asla döndürmez), `backend/routers/multiplayer.py`'deki `flag_eleven_timer`/`finish_flag_eleven` (online: tek el, mevcut tier kuyruğu üzerinden `game_mode: "flag_eleven"`), `frontend/screens/singleplayer/FlagElevenScreen.js`, `frontend/screens/multiplayer/MultiplayerFlagElevenScreen.js`.
 
 ## Kadro Seçimi
 Veri modelinde "belirli bir maçın ilk 11'i" bilgisini tutan bir tablo yoktur (mevcut istatistik tabloları yalnızca sezon bazlı toplam tutar, maç bazlı kadro değil). Bu nedenle kadro şöyle hesaplanır: rastgele bir takım + sezon seçilir, o takım-sezon kombinasyonunda **en çok maça çıkan 11 oyuncu** o sezonun "temsili İlk 11"i olarak kabul edilir. Bu, gerçek bir maçın kadrosu değil ama o sezonun en çok oynayan kadrosudur.
