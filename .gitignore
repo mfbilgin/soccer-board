@@ -29,3 +29,7 @@ Thumbs.db
 # Environments
 .env
 .env.local
+
+# Build artifacts / scratch
+frontend/soccer-board.apk
+taslak_plan.txt
