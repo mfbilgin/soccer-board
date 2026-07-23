@@ -13,6 +13,7 @@ class Player(Base):
     nationality = Column(String, nullable=True)
     birth_date = Column(String, nullable=True)
     position = Column(String, nullable=True)
+    height_cm = Column(Integer, nullable=True)
     image_url = Column(String, nullable=True)
     is_active = Column(Boolean, default=True)
     last_updated = Column(DateTime, nullable=True)

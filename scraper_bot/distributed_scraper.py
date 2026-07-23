@@ -126,13 +126,30 @@ def parse_team_id(href):
         return int(match.group(1))
     return None
 
+def fetch_player_height_cm(api_id):
+    """TMAPI'nin /player/{id} profil uc noktasindan boy bilgisini (metre) ceker, cm'ye cevirir."""
+    resp = fetch_json(f"{TMAPI_BASE}/player/{api_id}")
+    if not resp:
+        return None
+    data = resp.get('data', {}) or {}
+    height_m = (data.get('attributes', {}) or {}).get('height')
+    if not height_m:
+        return None
+    return round(height_m * 100)
+
 def process_player(db, player):
     api_id = player.api_id
     if not api_id:
         return False
-        
+
     player_db_id = player.id
-    
+
+    if player.height_cm is None:
+        height_cm = fetch_player_height_cm(api_id)
+        if height_cm:
+            player.height_cm = height_cm
+            db.commit()
+
     # 1. Performance (Club & National Stats) via TMAPI
     perf = fetch_json(f"{TMAPI_BASE}/player/{api_id}/performance-game")
     if perf and 'data' in perf and 'performance' in perf['data']:

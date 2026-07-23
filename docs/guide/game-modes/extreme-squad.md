@@ -2,7 +2,9 @@
 
 Bu mod, oyuncunun güncel futbol kadrolarındaki futbolcuların fiziksel özelliklerine (yaş, boy) ne kadar hakim olduğunu ölçen bir kadro mühendisliği oyunudur.
 
-**Durum:** Kodlanmadı. Bu sayfa tam bir uygulama şartnamesidir.
+**Durum:** Kodlandı ve çalışıyor (hem singleplayer hem online).
+
+Kod karşılığı: `backend/routers/extreme_squad.py` (`generate_puzzle`, `validate-single`, `validate`), `backend/routers/multiplayer.py`'deki `extreme_squad_timer`/`evaluate_extreme_squad` (online 1v1, mevcut tier kuyruğu üzerinden `game_mode: "extreme_squad"`), `frontend/screens/singleplayer/ExtremeSquadScreen.js`, `frontend/screens/multiplayer/MultiplayerExtremeSquadScreen.js`. `players.height_cm` kolonu eklendi ve `scraper_bot/distributed_scraper.py` + `backend/scripts/backfill_player_heights.py` bunu TMAPI'nin `/player/{id}` uç noktasından dolduruyor; `tallest` kriteri, yeterli takım height verisiyle kapsanana kadar otomatik olarak `youngest`'e düşer (bkz. `generate_puzzle`'daki fallback).
 
 ## Dizilim (sabit, tek format)
 Kadro her zaman **1-4-3-3** dizilimiyle, toplam **11 slotla** kurulur: 1 Kaleci, 4 Defans, 3 Ortasaha, 3 Forvet.

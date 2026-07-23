@@ -84,6 +84,21 @@ async def initialize_game_state(room_id: str):
         finally:
             db.close()
             
+    elif room.game_mode == "extreme_squad":
+        db = SessionLocal()
+        try:
+            from routers.extreme_squad import generate_puzzle
+            puzzle = generate_puzzle(db)
+            room.game_state = {
+                "puzzle": puzzle,
+                "submissions": {},
+                "locked_slots": {pid: [] for pid in room.players},
+                "timer_task": asyncio.create_task(extreme_squad_timer(room_id))
+            }
+            await room.broadcast({"type": "game_update", "action": "extreme_ready", "puzzle": puzzle})
+        finally:
+            db.close()
+
     elif room.game_mode in ["tictactoe_1", "tictactoe_2"]:
         db = SessionLocal()
         try:
@@ -230,6 +245,97 @@ async def evaluate_tictactoe_winner(room_id: str, reason: str, explicit_winner: 
                 p1: {"message": f"{sum(1 for c in board.values() if c['owner'] == p1)} Hücre"},
                 p2: {"message": f"{sum(1 for c in board.values() if c['owner'] == p2)} Hücre"}
             }
+        })
+    finally:
+        db.close()
+        for pid in list(room.players.keys()):
+            if pid in manager.user_rooms:
+                del manager.user_rooms[pid]
+        if room_id in manager.rooms:
+            del manager.rooms[room_id]
+
+async def extreme_squad_timer(room_id: str):
+    try:
+        elapsed = 0
+        while elapsed < 90:
+            room = manager.rooms.get(room_id)
+            if not room or room.state != "playing":
+                return
+
+            if len(room.disconnect_tasks) > 0:
+                await asyncio.sleep(1)
+                continue
+
+            elapsed += 1
+            await asyncio.sleep(1)
+
+        room = manager.rooms.get(room_id)
+        if room and room.state == "playing":
+            log_match_event(room_id, "SYSTEM", "Extreme Squad: sure doldu.")
+            await evaluate_extreme_squad(room_id)
+    except asyncio.CancelledError:
+        pass
+
+async def evaluate_extreme_squad(room_id: str):
+    room = manager.rooms.get(room_id)
+    if not room: return
+
+    room.state = "finished"
+    if "timer_task" in room.game_state:
+        room.game_state["timer_task"].cancel()
+
+    submissions = room.game_state.get("submissions", {})
+    puzzle = room.game_state.get("puzzle")
+
+    db = SessionLocal()
+    try:
+        from routers.extreme_squad import compute_extreme_submission
+        results = {}
+        distances = {}
+        for uid in room.players.keys():
+            sub = submissions.get(uid, {})
+            player_ids = sub.get("player_ids", [])
+            res = compute_extreme_submission(db, puzzle["criterion"], puzzle["slots"], player_ids)
+            results[uid] = res
+            distances[uid] = res["distance"] if res["valid"] else 999999
+            log_match_event(room_id, uid, f"Extreme Squad submission: valid={res['valid']} distance={res.get('distance')}")
+
+        p1, p2 = list(room.players.keys())
+        d1 = distances.get(p1, 999999)
+        d2 = distances.get(p2, 999999)
+
+        t1 = submissions.get(p1, {}).get("timestamp", float('inf'))
+        t2 = submissions.get(p2, {}).get("timestamp", float('inf'))
+
+        winner_id = None
+        if d1 < d2:
+            winner_id = p1
+        elif d2 < d1:
+            winner_id = p2
+        else:
+            if d1 != 999999:
+                if t1 < t2:
+                    winner_id = p1
+                elif t2 < t1:
+                    winner_id = p2
+
+        log_match_event(room_id, "SYSTEM", f"Extreme Squad evaluation complete. Winner: {winner_id}")
+
+        if winner_id:
+            loser_id = p2 if winner_id == p1 else p1
+            award_winnings(db, int(winner_id), room.entry_fee * 2)
+            update_rating(db, int(winner_id), int(loser_id))
+        else:
+            user1 = db.query(models.User).filter(models.User.id == int(p1)).first()
+            user2 = db.query(models.User).filter(models.User.id == int(p2)).first()
+            if user1: user1.chips += room.entry_fee
+            if user2: user2.chips += room.entry_fee
+            db.commit()
+
+        await room.broadcast({
+            "type": "game_over",
+            "winner_id": winner_id,
+            "results": results
         })
     finally:
         db.close()
@@ -627,6 +733,31 @@ async def websocket_endpoint(websocket: WebSocket, token: str = Query(...)):
                         if len(room.game_state["submissions"]) == 2:
                             room.game_state["timer_task"].cancel()
                             await evaluate_mode31(room_id)
+                        else:
+                            await room.broadcast({"type": "player_ready", "user_id": user_id})
+
+            elif action == "extreme_lock_slot":
+                room_id = manager.user_rooms.get(user_id)
+                if room_id and room_id in manager.rooms:
+                    room = manager.rooms[room_id]
+                    if room.game_mode == "extreme_squad" and room.state == "playing":
+                        slot_id = data.get("slot_id")
+                        locked = room.game_state.setdefault("locked_slots", {}).setdefault(user_id, [])
+                        if slot_id not in locked:
+                            locked.append(slot_id)
+                        await room.broadcast({"type": "game_update", "action": "extreme_slot_locked", "user_id": user_id, "slot_id": slot_id})
+
+            elif action == "extreme_submit":
+                room_id = manager.user_rooms.get(user_id)
+                if room_id and room_id in manager.rooms:
+                    room = manager.rooms[room_id]
+                    if room.game_mode == "extreme_squad" and room.state == "playing":
+                        data["timestamp"] = time.time()
+                        room.game_state["submissions"][user_id] = data
+                        log_match_event(room_id, user_id, f"Extreme Squad locked in with {len(data.get('player_ids', []))} players.")
+                        if len(room.game_state["submissions"]) == 2:
+                            room.game_state["timer_task"].cancel()
+                            await evaluate_extreme_squad(room_id)
                         else:
                             await room.broadcast({"type": "player_ready", "user_id": user_id})
 
