@@ -62,6 +62,8 @@ export default function RoomSelectionScreen({ route, navigation }) {
             navigation.navigate('ChainReaction', { tier });
         } else if (modeId === 'extreme_squad') {
             navigation.navigate('MultiplayerExtremeSquad', { tier });
+        } else if (modeId === 'find_two') {
+            navigation.navigate('FindTwo', { tier });
         } else {
             Alert.alert("Yakında", "Bu mod henüz aktif değil.");
         }

@@ -84,6 +84,31 @@ async def initialize_game_state(room_id: str):
         finally:
             db.close()
             
+    elif room.game_mode == "find_two":
+        db = SessionLocal()
+        try:
+            from find_two import FindTwoEngine
+            engine = FindTwoEngine(db)
+            round_data = engine.generate_round()
+            room.game_state = {
+                "round": round_data,
+                "round_num": 1,
+                "score": {pid: 0 for pid in room.players},
+                "guess_locks": {},
+                "turn_end_time": time.time() + 30,
+            }
+            room.game_state["timer_task"] = asyncio.create_task(find_two_timer(room_id))
+            await room.broadcast({
+                "type": "game_update",
+                "action": "find_two_round_ready",
+                "round": round_data,
+                "round_num": 1,
+                "score": room.game_state["score"],
+                "turn_end_time": room.game_state["turn_end_time"],
+            })
+        finally:
+            db.close()
+
     elif room.game_mode == "extreme_squad":
         db = SessionLocal()
         try:
@@ -245,6 +270,97 @@ async def evaluate_tictactoe_winner(room_id: str, reason: str, explicit_winner: 
                 p1: {"message": f"{sum(1 for c in board.values() if c['owner'] == p1)} Hücre"},
                 p2: {"message": f"{sum(1 for c in board.values() if c['owner'] == p2)} Hücre"}
             }
+        })
+    finally:
+        db.close()
+        for pid in list(room.players.keys()):
+            if pid in manager.user_rooms:
+                del manager.user_rooms[pid]
+        if room_id in manager.rooms:
+            del manager.rooms[room_id]
+
+async def find_two_timer(room_id: str):
+    try:
+        while True:
+            room = manager.rooms.get(room_id)
+            if not room or room.state != "playing":
+                return
+
+            if len(room.disconnect_tasks) > 0:
+                await asyncio.sleep(1)
+                continue
+
+            turn_end = room.game_state.get("turn_end_time", 0)
+            if time.time() >= turn_end:
+                log_match_event(room_id, "SYSTEM", "Find Two: sure doldu, tur berabere.")
+                await find_two_next_round(room_id, round_winner=None)
+
+            await asyncio.sleep(1)
+    except asyncio.CancelledError:
+        pass
+
+async def find_two_next_round(room_id: str, round_winner: str = None):
+    room = manager.rooms.get(room_id)
+    if not room or room.state != "playing": return
+    gs = room.game_state
+
+    if "timer_task" in gs:
+        gs["timer_task"].cancel()
+
+    if round_winner:
+        gs["score"][round_winner] += 1
+
+    await room.broadcast({
+        "type": "game_update",
+        "action": "find_two_round_result",
+        "round_winner": round_winner,
+        "round": gs["round"],
+        "score": gs["score"],
+    })
+
+    if round_winner and gs["score"][round_winner] >= 3:
+        await finish_find_two(room_id, round_winner)
+        return
+
+    db = SessionLocal()
+    try:
+        from find_two import FindTwoEngine
+        engine = FindTwoEngine(db)
+        round_data = engine.generate_round()
+        gs["round"] = round_data
+        gs["round_num"] += 1
+        gs["guess_locks"] = {}
+        gs["turn_end_time"] = time.time() + 30
+        gs["timer_task"] = asyncio.create_task(find_two_timer(room_id))
+        await room.broadcast({
+            "type": "game_update",
+            "action": "find_two_round_ready",
+            "round": round_data,
+            "round_num": gs["round_num"],
+            "score": gs["score"],
+            "turn_end_time": gs["turn_end_time"],
+        })
+    finally:
+        db.close()
+
+async def finish_find_two(room_id: str, winner_id: str):
+    room = manager.rooms.get(room_id)
+    if not room: return
+    room.state = "finished"
+    if "timer_task" in room.game_state:
+        room.game_state["timer_task"].cancel()
+
+    db = SessionLocal()
+    try:
+        loser_id = next(pid for pid in room.players.keys() if pid != winner_id)
+        log_match_event(room_id, "SYSTEM", f"Find Two bitti. Kazanan: {winner_id}")
+        award_winnings(db, int(winner_id), room.entry_fee * 2)
+        update_rating(db, int(winner_id), int(loser_id))
+
+        await room.broadcast({
+            "type": "game_over",
+            "winner_id": winner_id,
+            "score": room.game_state["score"],
         })
     finally:
         db.close()
@@ -735,6 +851,36 @@ async def websocket_endpoint(websocket: WebSocket, token: str = Query(...)):
                             await evaluate_mode31(room_id)
                         else:
                             await room.broadcast({"type": "player_ready", "user_id": user_id})
+
+            elif action == "find_two_guess":
+                room_id = manager.user_rooms.get(user_id)
+                if room_id and room_id in manager.rooms:
+                    room = manager.rooms[room_id]
+                    if room.game_mode == "find_two" and room.state == "playing":
+                        gs = room.game_state
+                        now = time.time()
+                        if gs["guess_locks"].get(user_id, 0) > now:
+                            continue
+
+                        try:
+                            entity_id = int(data.get("entity_id"))
+                        except (TypeError, ValueError):
+                            continue
+
+                        db = SessionLocal()
+                        try:
+                            from find_two import FindTwoEngine
+                            engine = FindTwoEngine(db)
+                            correct = engine.validate_guess(gs["round"], entity_id)
+                        finally:
+                            db.close()
+
+                        if correct:
+                            log_match_event(room_id, user_id, f"Find Two: correct guess (player {entity_id}).")
+                            await find_two_next_round(room_id, round_winner=user_id)
+                        else:
+                            gs["guess_locks"][user_id] = now + 3
+                            await websocket.send_json({"type": "find_two_wrong"})
 
             elif action == "extreme_lock_slot":
                 room_id = manager.user_rooms.get(user_id)

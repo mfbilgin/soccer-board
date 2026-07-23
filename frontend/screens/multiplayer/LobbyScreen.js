@@ -13,6 +13,7 @@ const GAME_MODES = [
     { id: 'tictactoe_2', title: 'Oyuncu XOX', icon: 'people-circle-outline', desc: 'Futbolcuların ortak takımlarını bul.', active: true },
     { id: 'chain_reaction', title: 'Zincir Oyunu', icon: 'link-outline', desc: '2-6 kişilik eleme: Oyuncu → Takım → Oyuncu.', active: true },
     { id: 'extreme_squad', title: 'Ekstrem Kadro', icon: 'body-outline', desc: '11 takımdan en genç/en uzun kadroyu ilk kur.', active: true },
+    { id: 'find_two', title: 'Kesişim Düellosu', icon: 'flash-outline', desc: '2 takım/ülkede oynayan oyuncuyu ilk yaz.', active: true },
     { id: 'pyramid', title: 'Piramit', icon: 'podium-outline', desc: 'En iyileri doğru sırayla diz.', active: false },
     { id: 'tournament', title: 'Turnuva', icon: 'trophy-outline', desc: 'Büyük ödül için yarış.', active: false },
 ];

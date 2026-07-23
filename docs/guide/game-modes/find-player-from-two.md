@@ -2,7 +2,9 @@
 
 Yalnızca online oynanabilen, yüksek hız ve bilgi gerektiren spesifik bir refleks (buzzer) modudur.
 
-**Durum:** Kodlanmadı. Bu sayfa tam bir uygulama şartnamesidir.
+**Durum:** Kodlandı ve çalışıyor.
+
+Kod karşılığı: `backend/find_two.py` (`FindTwoEngine` — kriter üretimi ve doğrulama, `tictactoe.py`'nin takım/oyuncu önbelleğini yeniden kullanır), `backend/routers/multiplayer.py`'deki `find_two_timer`/`find_two_next_round`/`finish_find_two` (mevcut tier kuyruğu üzerinden `game_mode: "find_two"`), `frontend/screens/multiplayer/FindTwoScreen.js`.
 
 ## Modun Türleri
 Oyun, oda kurulurken rastgele seçilen iki türden birinde oynanır:

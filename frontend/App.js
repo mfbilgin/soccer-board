@@ -27,6 +27,7 @@ import MultiplayerTicTacToeScreen from './screens/multiplayer/MultiplayerTicTacT
 import ChainReactionScreen from './screens/multiplayer/ChainReactionScreen';
 import ExtremeSquadScreen from './screens/singleplayer/ExtremeSquadScreen';
 import MultiplayerExtremeSquadScreen from './screens/multiplayer/MultiplayerExtremeSquadScreen';
+import FindTwoScreen from './screens/multiplayer/FindTwoScreen';
 import TargetScoreResultScreen from './screens/singleplayer/TargetScoreResultScreen';
 import CustomTabBar from './components/CustomTabBar';
 import { COLORS, FONTS } from './theme';
@@ -116,6 +117,7 @@ export default function App() {
         <Stack.Screen name="ChainReaction" component={ChainReactionScreen} options={{ headerShown: false }} />
         <Stack.Screen name="ExtremeSquad" component={ExtremeSquadScreen} options={{ title: 'Ekstrem Kadro' }} />
         <Stack.Screen name="MultiplayerExtremeSquad" component={MultiplayerExtremeSquadScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="FindTwo" component={FindTwoScreen} options={{ headerShown: false }} />
         <Stack.Screen name="TargetScoreResult" component={TargetScoreResultScreen} options={{ title: 'Sonuç', headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
