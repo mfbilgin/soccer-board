@@ -17,13 +17,22 @@ _CACHE = {}
 # Salt market_value'ya göre TÜM liglerden top-N seçmek de kendi başına yanlıydı:
 # İngiltere Championship (2. lig) gibi finansal olarak şişkin ama ikinci-kademe
 # ligler, birçok ülkenin 1. ligini havuzdan tamamen dışarı itiyordu (bkz. proje
-# notları). Bunun yerine havuzu, Transfermarkt'ın primary_competition_id kodlarıyla
-# Big-5 Avrupa ligi + Süper Lig'e (yalnızca 1. kademe) sabitliyoruz; bu 6 lig
-# içinde oyuncu transferi zaten çok yoğun olduğu için 3x3 çözülebilirlik garantisi
-# bozulmuyor (bkz. commit mesajı / manuel stres testi: 300/300 basarili).
+# notları). Ayrıca her ligden mevcut tüm takımları almak da (ör. Süper Lig'in
+# 17'si) kuyruktaki az tanınan takımları (Amed SK, Erzurumspor, Eyüpspor gibi)
+# oyuna sokuyordu. Bunun yerine her lig için ayrı, elle belirlenmiş bir üst
+# sınır (PER_COMPETITION_LIMIT) var — market_value'ya göre sıralanıp yalnızca
+# o sınıra kadarı havuza giriyor. Bu 6 lig içinde oyuncu transferi zaten çok
+# yoğun olduğu için 3x3 çözülebilirlik garantisi bozulmuyor (bkz. commit
+# mesajı / manuel stres testi).
 CANDIDATE_POOL_SIZE = 2000
-TEAM_POOL_SIZE = 150
-RECOGNIZABLE_COMPETITIONS = {"GB1", "ES1", "IT1", "L1", "FR1", "TR1"}  # PL, La Liga, Serie A, Bundesliga, Ligue 1, Süper Lig
+PER_COMPETITION_LIMIT = {
+    "GB1": 20,  # Premier League — tamamı
+    "ES1": 10,  # La Liga
+    "IT1": 16,  # Serie A
+    "L1": 12,   # Bundesliga
+    "FR1": 7,   # Ligue 1
+    "TR1": 3,   # Süper Lig — yalnızca Fenerbahçe/Galatasaray/Beşiktaş
+}
 
 class TicTacToeEngine:
     def __init__(self, db: Session):
@@ -69,34 +78,44 @@ class TicTacToeEngine:
     def _select_popular_teams(self) -> list:
         """Nihai takım havuzunu üretir: appearances ile geniş bir aday havuzu
         (veri/kesişim yeterliliği garantisi) çıkarılır, bu adaylardan yalnızca
-        RECOGNIZABLE_COMPETITIONS'taki (Big-5 + Süper Lig) takımlar elenerek
-        market_value'ya göre en yüksekten aşağı sıralanır. market_value henüz
-        TMAPI'den çekilmemiş bu ligdeki takımlar için (scrape backfill sırasında)
-        kalan kontenjan appearances sırasından doldurulur — ama her durumda
-        RECOGNIZABLE_COMPETITIONS sınırının dışına çıkılmaz; havuz gerekirse
-        TEAM_POOL_SIZE'ın altında kalır, asla başka lige taşmaz."""
+        PER_COMPETITION_LIMIT'te tanımlı liglerdeki takımlar elenir. Her lig
+        kendi içinde market_value'ya göre sıralanır ve yalnızca o ligin
+        kendi limitine kadarı (ör. TR1 için 3, GB1 için 20) havuza girer —
+        böylece bir ligin uzun kuyruğu (az tanınan takımlar) hiç seçilmez ve
+        hiçbir lig diğerini havuzda ezmez. market_value henüz TMAPI'den
+        çekilmemiş bir takım için (scrape backfill sırasında) o ligin kendi
+        limiti appearances sırasından doldurulur; limit hiçbir zaman başka
+        lige taşmaz."""
         candidate_rows = self.db.query(models.PlayerClubStat.team_id) \
             .group_by(models.PlayerClubStat.team_id) \
             .order_by(func.sum(models.PlayerClubStat.appearances).desc()) \
             .limit(CANDIDATE_POOL_SIZE).all()
         candidate_ids_by_appearances = [r[0] for r in candidate_rows]
 
-        recognizable_teams = self.db.query(models.Team.id, models.Team.market_value) \
+        recognizable_teams = self.db.query(models.Team.id, models.Team.market_value, models.Team.primary_competition_id) \
             .filter(
                 models.Team.id.in_(candidate_ids_by_appearances),
-                models.Team.primary_competition_id.in_(RECOGNIZABLE_COMPETITIONS),
+                models.Team.primary_competition_id.in_(PER_COMPETITION_LIMIT.keys()),
             ).all()
-        recognizable_ids = {tid for tid, _ in recognizable_teams}
-        market_value_by_id = {tid: mv for tid, mv in recognizable_teams if mv is not None}
 
-        ranked_by_market_value = sorted(market_value_by_id, key=lambda tid: market_value_by_id[tid], reverse=True)
-        popular_team_ids = ranked_by_market_value[:TEAM_POOL_SIZE]
+        by_competition = {}
+        for tid, mv, comp in recognizable_teams:
+            by_competition.setdefault(comp, []).append((tid, mv))
 
-        if len(popular_team_ids) < TEAM_POOL_SIZE:
-            already_selected = set(popular_team_ids)
-            # market_value'su henuz cekilmemis ama yine de whitelist'teki takimlarla doldur
-            fallback = [tid for tid in candidate_ids_by_appearances if tid in recognizable_ids and tid not in already_selected]
-            popular_team_ids += fallback[:TEAM_POOL_SIZE - len(popular_team_ids)]
+        popular_team_ids = []
+        for comp, limit in PER_COMPETITION_LIMIT.items():
+            teams = by_competition.get(comp, [])
+            with_value = sorted([(tid, mv) for tid, mv in teams if mv is not None], key=lambda x: x[1], reverse=True)
+            selected = [tid for tid, _ in with_value[:limit]]
+
+            if len(selected) < limit:
+                # market_value'su henuz cekilmemis takimlarla ayni ligin limitini doldur
+                already_selected = set(selected)
+                without_value_ids = {tid for tid, mv in teams if mv is None} - already_selected
+                fallback = [tid for tid in candidate_ids_by_appearances if tid in without_value_ids]
+                selected += fallback[:limit - len(selected)]
+
+            popular_team_ids += selected
 
         return popular_team_ids
 
