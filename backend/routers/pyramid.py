@@ -29,7 +29,7 @@ def generate_puzzle(db: Session) -> dict:
     """Ic temsil - gizlenmesi gereken hucreler dahil TUM isimleri icerir.
     Singleplayer endpoint'i (mevcut davranisi korumak icin) oldugu gibi
     dondurur; multiplayer ise yayinlamadan once gizli hucrelerin ismini
-    kirpar (bkz. routers/multiplayer.py._top10_public_items)."""
+    kirpar (bkz. games/top10.py Top10Game._public_items)."""
     # Rastgele bir tür seç: 0 = Kulüp Ligi (Gol/Asist/Maç), 1 = Milli Takım (Gol), 2 = Takım Bazlı (Kariyer Toplamı)
     mode = random.choice([0, 1, 2])
     

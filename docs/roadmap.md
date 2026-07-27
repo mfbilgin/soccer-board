@@ -23,7 +23,7 @@ Hiç kodlanmadı (bkz. [features/notifications.md](/features/notifications)). En
 ### 3. Bilinen Teknik Borç
 - `security.py`'deki `SECRET_KEY` ortam değişkenine taşınmalı (bkz. [ADR 001](/decisions/001-auth)).
 - `LoginScreen.js`'in jenerik hata mesajı (ağ hatası ile yanlış şifreyi ayırt etmiyor).
-- `routers/multiplayer.py` büyüyor; bir sonraki modda mod-başına dosyalara bölünmesi değerlendirilmeli (bkz. [ADR 003](/decisions/003-api)).
+- ~~`routers/multiplayer.py` büyüyor; mod-başına dosyalara bölünmeli~~ — yapıldı: online modlar `backend/games/` paketinde mod-başına `GameMode` sınıflarına ayrıldı (bkz. [architecture/backend.md](/architecture/backend)).
 - Modül-seviyesi önbellekler (`flag_eleven.PUZZLES` gibi) TTL'siz büyüyor.
 - `scraper_bot/models_v2.py` ile `backend/models.py`'nin manuel senkron tutulması gerekiyor (bkz. [architecture/database.md](/architecture/database)).
 

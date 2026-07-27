@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from database import SessionLocal
 from models import User
 
 RAKE_PERCENTAGE = 0.10
@@ -16,6 +17,29 @@ def deduct_entry_fee(db: Session, user_id: int, fee: int) -> bool:
     db.commit()
     db.refresh(user)
     return True
+
+def refund_entry_fee(db: Session, user_id: int, fee: int):
+    """Giriş ücretini iade eder (kuyruktan/lobiden ayrılma, beraberlik vb.)."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if user:
+        user.chips += fee
+        db.commit()
+
+def deduct_entry_fee_safe(user_id: int, fee: int) -> bool:
+    """Kendi DB oturumunu yöneten deduct_entry_fee sarmalayıcısı (WS katmanı için)."""
+    db = SessionLocal()
+    try:
+        return deduct_entry_fee(db, user_id, fee)
+    finally:
+        db.close()
+
+def refund_entry_fee_safe(user_id: int, fee: int):
+    """Kendi DB oturumunu yöneten refund_entry_fee sarmalayıcısı (WS katmanı için)."""
+    db = SessionLocal()
+    try:
+        refund_entry_fee(db, user_id, fee)
+    finally:
+        db.close()
 
 def award_winnings(db: Session, winner_id: int, total_pool: int) -> int:
     """Kazanan oyuncuya Rake (%10) kesildikten sonraki ödülü ekler."""
