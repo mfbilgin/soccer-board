@@ -13,8 +13,17 @@ _CACHE = {}
 # TMAPI'den çekilen kadro piyasa değerine (Team.market_value) göre sıralıyoruz —
 # appearances toplamı yerel liglerdeki köklü ama global olarak tanınmayan takımları
 # öne çıkarabiliyordu (bkz. scripts/refresh_team_market_values.py).
+#
+# Salt market_value'ya göre TÜM liglerden top-N seçmek de kendi başına yanlıydı:
+# İngiltere Championship (2. lig) gibi finansal olarak şişkin ama ikinci-kademe
+# ligler, birçok ülkenin 1. ligini havuzdan tamamen dışarı itiyordu (bkz. proje
+# notları). Bunun yerine havuzu, Transfermarkt'ın primary_competition_id kodlarıyla
+# Big-5 Avrupa ligi + Süper Lig'e (yalnızca 1. kademe) sabitliyoruz; bu 6 lig
+# içinde oyuncu transferi zaten çok yoğun olduğu için 3x3 çözülebilirlik garantisi
+# bozulmuyor (bkz. commit mesajı / manuel stres testi: 300/300 basarili).
 CANDIDATE_POOL_SIZE = 2000
 TEAM_POOL_SIZE = 150
+RECOGNIZABLE_COMPETITIONS = {"GB1", "ES1", "IT1", "L1", "FR1", "TR1"}  # PL, La Liga, Serie A, Bundesliga, Ligue 1, Süper Lig
 
 class TicTacToeEngine:
     def __init__(self, db: Session):
@@ -59,28 +68,34 @@ class TicTacToeEngine:
 
     def _select_popular_teams(self) -> list:
         """Nihai takım havuzunu üretir: appearances ile geniş bir aday havuzu
-        (veri/kesişim yeterliliği garantisi) çıkarılır, bu adaylar arasından
-        TEAM_POOL_SIZE kadarı kadro piyasa değerine (market_value) göre en
-        yüksekten aşağı seçilir. market_value henüz TMAPI'den çekilmemiş
-        takımlar için (veya scrape hiç çalıştırılmamışsa) kalan kontenjan
-        appearances sırasından doldurulur — böylece havuz asla boş kalmaz."""
+        (veri/kesişim yeterliliği garantisi) çıkarılır, bu adaylardan yalnızca
+        RECOGNIZABLE_COMPETITIONS'taki (Big-5 + Süper Lig) takımlar elenerek
+        market_value'ya göre en yüksekten aşağı sıralanır. market_value henüz
+        TMAPI'den çekilmemiş bu ligdeki takımlar için (scrape backfill sırasında)
+        kalan kontenjan appearances sırasından doldurulur — ama her durumda
+        RECOGNIZABLE_COMPETITIONS sınırının dışına çıkılmaz; havuz gerekirse
+        TEAM_POOL_SIZE'ın altında kalır, asla başka lige taşmaz."""
         candidate_rows = self.db.query(models.PlayerClubStat.team_id) \
             .group_by(models.PlayerClubStat.team_id) \
             .order_by(func.sum(models.PlayerClubStat.appearances).desc()) \
             .limit(CANDIDATE_POOL_SIZE).all()
         candidate_ids_by_appearances = [r[0] for r in candidate_rows]
 
-        candidate_teams = self.db.query(models.Team.id, models.Team.market_value) \
-            .filter(models.Team.id.in_(candidate_ids_by_appearances), models.Team.market_value.isnot(None)) \
-            .all()
-        market_value_by_id = {tid: mv for tid, mv in candidate_teams}
+        recognizable_teams = self.db.query(models.Team.id, models.Team.market_value) \
+            .filter(
+                models.Team.id.in_(candidate_ids_by_appearances),
+                models.Team.primary_competition_id.in_(RECOGNIZABLE_COMPETITIONS),
+            ).all()
+        recognizable_ids = {tid for tid, _ in recognizable_teams}
+        market_value_by_id = {tid: mv for tid, mv in recognizable_teams if mv is not None}
 
         ranked_by_market_value = sorted(market_value_by_id, key=lambda tid: market_value_by_id[tid], reverse=True)
         popular_team_ids = ranked_by_market_value[:TEAM_POOL_SIZE]
 
         if len(popular_team_ids) < TEAM_POOL_SIZE:
             already_selected = set(popular_team_ids)
-            fallback = [tid for tid in candidate_ids_by_appearances if tid not in already_selected]
+            # market_value'su henuz cekilmemis ama yine de whitelist'teki takimlarla doldur
+            fallback = [tid for tid in candidate_ids_by_appearances if tid in recognizable_ids and tid not in already_selected]
             popular_team_ids += fallback[:TEAM_POOL_SIZE - len(popular_team_ids)]
 
         return popular_team_ids
