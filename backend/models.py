@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Float
 from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
@@ -36,6 +36,9 @@ class Team(Base):
     country = Column(String, nullable=True)
     type = Column(String, nullable=True) # 'club' or 'national'
     logo_url = Column(String, nullable=True)
+    market_value = Column(Float, nullable=True) # EUR, TMAPI squadDetails.currentMarketValue
+    primary_competition_id = Column(String, nullable=True) # TMAPI baseDetails.primaryCompetitionId (ör. "ES1", "TR2")
+    market_value_updated = Column(DateTime, nullable=True)
 
     def __repr__(self):
         return f"<Team(name='{self.name}', type='{self.type}')>"

@@ -8,6 +8,14 @@ import models
 
 _CACHE = {}
 
+# Global tanınırlık için: appearances'a göre "yeterli veri var mı" (çözülebilirlik)
+# adaylığını CANDIDATE_POOL_SIZE kadar geniş tutup, nihai TEAM_POOL_SIZE'lık havuzu
+# TMAPI'den çekilen kadro piyasa değerine (Team.market_value) göre sıralıyoruz —
+# appearances toplamı yerel liglerdeki köklü ama global olarak tanınmayan takımları
+# öne çıkarabiliyordu (bkz. scripts/refresh_team_market_values.py).
+CANDIDATE_POOL_SIZE = 2000
+TEAM_POOL_SIZE = 150
+
 class TicTacToeEngine:
     def __init__(self, db: Session):
         self.db = db
@@ -20,10 +28,7 @@ class TicTacToeEngine:
 
     def _initialize_pools(self):
         print("Initializing TicTacToe cache in memory...")
-        top_teams = self.db.query(models.PlayerClubStat.team_id).group_by(models.PlayerClubStat.team_id).order_by(func.sum(models.PlayerClubStat.appearances).desc()).limit(150).all()
-        popular_team_ids = [t[0] for t in top_teams]
-
-
+        popular_team_ids = self._select_popular_teams()
 
         elite_players = self.db.query(
             models.PlayerClubStat.player_id
@@ -51,6 +56,34 @@ class TicTacToeEngine:
         _CACHE['team_players'] = team_players
         _CACHE['player_teams'] = player_teams
         print("Cache initialized!")
+
+    def _select_popular_teams(self) -> list:
+        """Nihai takım havuzunu üretir: appearances ile geniş bir aday havuzu
+        (veri/kesişim yeterliliği garantisi) çıkarılır, bu adaylar arasından
+        TEAM_POOL_SIZE kadarı kadro piyasa değerine (market_value) göre en
+        yüksekten aşağı seçilir. market_value henüz TMAPI'den çekilmemiş
+        takımlar için (veya scrape hiç çalıştırılmamışsa) kalan kontenjan
+        appearances sırasından doldurulur — böylece havuz asla boş kalmaz."""
+        candidate_rows = self.db.query(models.PlayerClubStat.team_id) \
+            .group_by(models.PlayerClubStat.team_id) \
+            .order_by(func.sum(models.PlayerClubStat.appearances).desc()) \
+            .limit(CANDIDATE_POOL_SIZE).all()
+        candidate_ids_by_appearances = [r[0] for r in candidate_rows]
+
+        candidate_teams = self.db.query(models.Team.id, models.Team.market_value) \
+            .filter(models.Team.id.in_(candidate_ids_by_appearances), models.Team.market_value.isnot(None)) \
+            .all()
+        market_value_by_id = {tid: mv for tid, mv in candidate_teams}
+
+        ranked_by_market_value = sorted(market_value_by_id, key=lambda tid: market_value_by_id[tid], reverse=True)
+        popular_team_ids = ranked_by_market_value[:TEAM_POOL_SIZE]
+
+        if len(popular_team_ids) < TEAM_POOL_SIZE:
+            already_selected = set(popular_team_ids)
+            fallback = [tid for tid in candidate_ids_by_appearances if tid not in already_selected]
+            popular_team_ids += fallback[:TEAM_POOL_SIZE - len(popular_team_ids)]
+
+        return popular_team_ids
 
     def _check_team_intersection(self, team1_id: int, team2_id: int) -> bool:
         t1_players = self.team_players.get(team1_id, set())

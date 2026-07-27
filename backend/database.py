@@ -20,7 +20,15 @@ connect_args = {}
 if DATABASE_URL.startswith("sqlite"):
     connect_args = {"check_same_thread": False}
 
-engine = create_engine(DATABASE_URL, connect_args=connect_args)
+engine = create_engine(
+    DATABASE_URL,
+    connect_args=connect_args,
+    pool_pre_ping=True,  # kullanmadan once baglantiyi "ping"ler; yonetilen DB'nin
+                          # boşta kalan baglantilari sessizce kapatmasina karsi
+                          # (bkz. "server closed the connection unexpectedly")
+    pool_recycle=280,    # yaygin managed-DB idle-timeout esiklerinden (~300sn)
+                          # once baglantiyi proaktif olarak tazeler
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def get_db():
