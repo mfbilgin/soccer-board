@@ -17,6 +17,10 @@ class Player(Base):
     image_url = Column(String, nullable=True)
     is_active = Column(Boolean, default=True)
     last_updated = Column(DateTime, nullable=True)
+    peak_market_value = Column(Float, nullable=True) # EUR, TMAPI marketValueDetails.highest — kariyer zirvesi;
+                                                       # "current" emekli/yaslanan oyuncularda 0'a duser, tanınırlık için yanıltıcı
+    current_team_id = Column(Integer, nullable=True) # clubAssignments[type=current].clubId -> teams.id
+    market_value_updated = Column(DateTime, nullable=True)
 
     # Relationships
     club_stats = relationship("PlayerClubStat", back_populates="player")

@@ -34,6 +34,18 @@ PER_COMPETITION_LIMIT = {
     "TR1": 3,   # Süper Lig — yalnızca Fenerbahçe/Galatasaray/Beşiktaş
 }
 
+# Oyuncu XOX (Type 2 grid) için benzer mantık, ama appearances toplamına göre
+# aday seçmek genç süperstarları (Haaland appearances'ta 6947., Mbappé 2634.,
+# Vinicius Jr 3846. sıradaydı) tamamen dışarıda bırakıyordu — appearances
+# kariyer uzunluğuna bağlı, "şu an ne kadar meşhur"a değil. Bunun yerine adaylık,
+# oyuncunun kariyerinde en az 10 maç bizim tanınır-takım havuzumuzda (Big-5/TR1,
+# PER_COMPETITION_LIMIT) oynamış olmasına göre belirlenir — bu PlayerClubStat'ta
+# zaten var, TMAPI'ye gitmeden hesaplanır. Sıralama peak_market_value'ya (TMAPI
+# "highest" — kariyer zirvesi, "current" emekli oyuncularda 0'a düşüyordu) göre.
+# Takım havuzunun aksine burada henüz lig-başına kota yok — tek, düz
+# peak_market_value sıralı bir havuz; sonuçlar görülüp gerekirse kotalanacak.
+PLAYER_POOL_SIZE = 150
+
 class TicTacToeEngine:
     def __init__(self, db: Session):
         self.db = db
@@ -47,13 +59,7 @@ class TicTacToeEngine:
     def _initialize_pools(self):
         print("Initializing TicTacToe cache in memory...")
         popular_team_ids = self._select_popular_teams()
-
-        elite_players = self.db.query(
-            models.PlayerClubStat.player_id
-        ).group_by(models.PlayerClubStat.player_id).order_by(
-            func.sum(models.PlayerClubStat.appearances).desc()
-        ).limit(150).all()
-        elite_player_ids = [p[0] for p in elite_players]
+        elite_player_ids = self._select_elite_players(popular_team_ids)
 
         all_histories = self.db.query(models.PlayerClubStat.player_id, models.PlayerClubStat.team_id).all()
         
@@ -118,6 +124,42 @@ class TicTacToeEngine:
             popular_team_ids += selected
 
         return popular_team_ids
+
+    def _select_elite_players(self, popular_team_ids: list) -> list:
+        """Oyuncu havuzunu üretir. Adaylık appearances TOPLAMINA göre değil
+        (genç süperstarlar — Haaland appearances'ta 6947., Mbappé 2634.,
+        Vinicius Jr 3846. sıradaydı, top-2000'e hiç girmiyorlardı), kariyeri
+        boyunca EN AZ MIN_APPEARANCES_FOR_POOL_TEAM maç bizim tanınır-takım
+        havuzumuzdaki (popular_team_ids) bir kulüpte oynamış olmasına göre
+        belirlenir — bu bilgi zaten PlayerClubStat'ta var, TMAPI'ye gitmeden
+        hesaplanır. Adaylar peak_market_value'ya (kariyer zirvesi) göre
+        sıralanıp PLAYER_POOL_SIZE kadarı seçilir; henüz taranmamışlar için
+        kalan kontenjan appearances sırasından doldurulur."""
+        MIN_APPEARANCES_FOR_POOL_TEAM = 10
+
+        candidate_rows = self.db.query(
+            models.PlayerClubStat.player_id,
+            func.sum(models.PlayerClubStat.appearances).label("apps")
+        ).filter(models.PlayerClubStat.team_id.in_(popular_team_ids)) \
+         .group_by(models.PlayerClubStat.player_id) \
+         .having(func.sum(models.PlayerClubStat.appearances) >= MIN_APPEARANCES_FOR_POOL_TEAM) \
+         .order_by(func.sum(models.PlayerClubStat.appearances).desc()) \
+         .all()
+        candidate_ids_by_appearances = [r[0] for r in candidate_rows]
+
+        candidate_players = self.db.query(models.Player.id, models.Player.peak_market_value) \
+            .filter(models.Player.id.in_(candidate_ids_by_appearances)).all()
+        market_value_by_id = {pid: mv for pid, mv in candidate_players if mv is not None}
+
+        ranked_by_market_value = sorted(market_value_by_id, key=lambda pid: market_value_by_id[pid], reverse=True)
+        elite_player_ids = ranked_by_market_value[:PLAYER_POOL_SIZE]
+
+        if len(elite_player_ids) < PLAYER_POOL_SIZE:
+            already_selected = set(elite_player_ids)
+            fallback = [pid for pid in candidate_ids_by_appearances if pid not in already_selected]
+            elite_player_ids += fallback[:PLAYER_POOL_SIZE - len(elite_player_ids)]
+
+        return elite_player_ids
 
     def _check_team_intersection(self, team1_id: int, team2_id: int) -> bool:
         t1_players = self.team_players.get(team1_id, set())
